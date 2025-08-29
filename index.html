@@ -28,6 +28,9 @@
                 <h2>Umbraix AI</h2>
                 <p>Online • Powered by Gemini 2.5 Flash</p>
             </div>
+            <button class="model-select-button" id="modelSelectButton">
+                <i class="fas fa-cog"></i>
+            </button>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -69,7 +72,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="chat-input-container">
             <div class="input-area">
                 <button class="mode-button" id="modeButton">
@@ -81,16 +84,42 @@
                 </button>
             </div>
         </div>
+
+        <div class="popup-menu" id="modelPopupMenu">
+            <div class="popup-header">
+                <h3>Select Model</h3>
+                <button class="close-popup" id="closeModelPopup">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="model-options">
+                <div class="model-option" data-model="gemini-2.5-pro">
+                    <i class="fas fa-brain"></i>
+                    <h4>Gemini 2.5 Pro</h4>
+                    <p>Most powerful model</p>
+                </div>
+                <div class="model-option active" data-model="gemini-2.5-flash">
+                    <i class="fas fa-bolt"></i>
+                    <h4>Gemini 2.5 Flash</h4>
+                    <p>Fast and efficient</p>
+                </div>
+                <div class="model-option" data-model="gemini-2.0-flash">
+                    <i class="fas fa-rocket"></i>
+                    <h4>Gemini 2.0 Flash</h4>
+                    <p>Legacy fast model</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         // Gemini AI Configuration
-        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
         
         // Chat state
         let conversationHistory = [];
         let currentMode = 'normal';
+        let currentModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
         let isGenerating = false;
 
         // DOM elements
@@ -102,6 +131,10 @@
         const closePopup = document.getElementById('closePopup');
         const overlay = document.getElementById('overlay');
         const modeOptions = document.querySelectorAll('.mode-option');
+        const modelSelectButton = document.getElementById('modelSelectButton');
+        const modelPopupMenu = document.getElementById('modelPopupMenu');
+        const closeModelPopup = document.getElementById('closeModelPopup');
+        const modelOptions = document.querySelectorAll('.model-option');
         const apiSetup = document.getElementById('apiSetup');
 
         // Mode system prompts
@@ -136,7 +169,9 @@
                 addInitialMessage();
             }
             
-            updateModeSelection();
+            updateSelection('mode', currentMode);
+            updateSelection('model', currentModel);
+            updateChatHeader();
             setupEventListeners();
         });
 
@@ -216,7 +251,7 @@
                 if (currentMode !== 'normal' && !isError) {
                     const modeIndicator = document.createElement('span');
                     modeIndicator.classList.add('mode-indicator');
-                    modeIndicator.textContent = getModeDisplayName(currentMode);
+                    modeIndicator.textContent = getDisplayName('mode', currentMode);
                     messageDiv.appendChild(modeIndicator);
                 }
             }
@@ -229,14 +264,29 @@
             addMessage("Hello! I'm Umbraix AI, powered by Google Gemini 2.5 Flash. How can I help you today?");
         }
 
-        function getModeDisplayName(mode) {
+        function getDisplayName(type, value) {
             const names = {
-                normal: 'Normal',
-                webSearch: 'Web Search',
-                think: 'Think Mode',
-                creative: 'Creative'
+                mode: {
+                    normal: 'Normal',
+                    webSearch: 'Web Search',
+                    think: 'Think Mode',
+                    creative: 'Creative'
+                },
+                model: {
+                    'gemini-2.5-pro': 'Gemini 2.5 Pro',
+                    'gemini-2.5-flash': 'Gemini 2.5 Flash',
+                    'gemini-2.0-flash': 'Gemini 2.0 Flash'
+                }
             };
-            return names[mode] || 'Normal';
+            return names[type][value] || value;
+        }
+
+        function updateChatHeader() {
+            const headerInfo = document.querySelector('.chat-header-info');
+            headerInfo.innerHTML = `
+                <h2>Umbraix AI</h2>
+                <p>Online • Powered by ${getDisplayName('model', currentModel)}</p>
+            `;
         }
 
         function scrollToBottom() {
@@ -267,6 +317,7 @@
         // Gemini AI Integration
         async function callGeminiAPI(message) {
             const systemPrompt = modePrompts[currentMode];
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
             
             // Build conversation context
             let conversationContext = [
@@ -297,7 +348,7 @@
             };
 
             try {
-                const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -387,23 +438,41 @@
             }
         }
 
-        // Mode Management
-        function updateModeSelection() {
-            modeOptions.forEach(option => {
-                const mode = option.getAttribute('data-mode');
-                option.classList.toggle('active', mode === currentMode);
+        // Mode and Model Management
+        function updateSelection(type, value) {
+            const options = type === 'mode' ? modeOptions : modelOptions;
+            options.forEach(option => {
+                const dataValue = option.getAttribute(`data-${type}`);
+                option.classList.toggle('active', dataValue === value);
             });
         }
 
         function openPopup() {
+            closeModelPopupMenu();
             popupMenu.classList.add('show');
             overlay.classList.add('show');
-            updateModeSelection();
+            updateSelection('mode', currentMode);
         }
 
         function closePopupMenu() {
             popupMenu.classList.remove('show');
-            overlay.classList.remove('show');
+            if (!modelPopupMenu.classList.contains('show')) {
+                overlay.classList.remove('show');
+            }
+        }
+
+        function openModelPopup() {
+            closePopupMenu();
+            modelPopupMenu.classList.add('show');
+            overlay.classList.add('show');
+            updateSelection('model', currentModel);
+        }
+
+        function closeModelPopupMenu() {
+            modelPopupMenu.classList.remove('show');
+            if (!popupMenu.classList.contains('show')) {
+                overlay.classList.remove('show');
+            }
         }
 
         // Event Listeners
@@ -419,21 +488,44 @@
             
             modeButton.addEventListener('click', openPopup);
             closePopup.addEventListener('click', closePopupMenu);
-            overlay.addEventListener('click', closePopupMenu);
+
+            modelSelectButton.addEventListener('click', openModelPopup);
+            closeModelPopup.addEventListener('click', closeModelPopupMenu);
+
+            overlay.addEventListener('click', () => {
+                closePopupMenu();
+                closeModelPopupMenu();
+            });
             
             modeOptions.forEach(option => {
                 option.addEventListener('click', function() {
                     currentMode = this.getAttribute('data-mode');
+                    updateSelection('mode', currentMode);
                     closePopupMenu();
                 });
             });
+
+            modelOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    currentModel = this.getAttribute('data-model');
+                    localStorage.setItem('gemini_model', currentModel);
+                    updateSelection('model', currentModel);
+                    updateChatHeader();
+                    closeModelPopupMenu();
+                });
+            });
             
-            // Close popup when clicking outside
+            // Close popups when clicking outside
             document.addEventListener('click', function(e) {
                 if (popupMenu.classList.contains('show') && 
                     !popupMenu.contains(e.target) && 
                     !modeButton.contains(e.target)) {
                     closePopupMenu();
+                }
+                if (modelPopupMenu.classList.contains('show') &&
+                    !modelPopupMenu.contains(e.target) &&
+                    !modelSelectButton.contains(e.target)) {
+                    closeModelPopupMenu();
                 }
             });
             

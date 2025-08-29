@@ -75,6 +75,22 @@
             opacity: 0.9;
         }
 
+        .model-select-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: var(--transition);
+            margin-left: auto;
+        }
+
+        .model-select-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         .chat-messages {
             flex: 1;
             padding: 25px;
@@ -287,7 +303,10 @@
             display: none;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 0, 0, 0.05);
+            max-height: 80vh;
+            overflow-y: auto;
         }
+
 
         .popup-menu.show {
             display: block;
@@ -331,13 +350,17 @@
             background: var(--light-gray);
         }
 
-        .mode-options {
+        .mode-options, .model-options {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
 
-        .mode-option {
+        .model-options {
+            grid-template-columns: 1fr;
+        }
+
+        .mode-option, .model-option {
             padding: 15px;
             border-radius: 12px;
             background: white;
