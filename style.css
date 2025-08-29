@@ -303,6 +303,8 @@
             display: none;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 0, 0, 0.05);
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         #modelPopupMenu {
