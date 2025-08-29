@@ -306,12 +306,13 @@
         }
 
         #modelPopupMenu {
-            top: 80px;
-            right: 20px;
-            left: auto;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             bottom: auto;
-            transform: none;
-            width: 300px;
+            right: auto;
+            width: 90%;
+            max-width: 400px;
         }
 
         .popup-menu.show {
