@@ -331,13 +331,17 @@
             background: var(--light-gray);
         }
 
-        .mode-options {
+        .mode-options, .model-options {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
 
-        .mode-option {
+        .model-options {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .mode-option, .model-option {
             padding: 15px;
             border-radius: 12px;
             background: white;
@@ -351,33 +355,33 @@
             gap: 10px;
         }
 
-        .mode-option:hover {
+        .mode-option:hover, .model-option:hover {
             border-color: var(--primary);
             transform: translateY(-3px);
         }
 
-        .mode-option i {
+        .mode-option i, .model-option i {
             font-size: 1.5rem;
             color: var(--primary);
         }
 
-        .mode-option.active {
+        .mode-option.active, .model-option.active {
             border-color: var(--primary);
             background: rgba(34, 34, 34, 0.03);
         }
 
-        .mode-option.active i {
+        .mode-option.active i, .model-option.active i {
             color: var(--primary-dark);
         }
 
-        .mode-option h4 {
+        .mode-option h4, .model-option h4 {
             font-size: 1rem;
             margin: 0;
             color: var(--dark);
             font-weight: 500;
         }
 
-        .mode-option p {
+        .mode-option p, .model-option p {
             font-size: 0.8rem;
             color: var(--gray);
             margin: 0;
@@ -568,7 +572,7 @@
             .popup-menu {
                 bottom: 70px;
             }
-            .mode-options {
+            .mode-options, .model-options {
                 grid-template-columns: 1fr;
             }
         }
