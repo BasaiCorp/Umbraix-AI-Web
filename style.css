@@ -75,6 +75,21 @@
             opacity: 0.9;
         }
 
+        .model-select-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: var(--transition);
+            margin-left: auto;
+        }
+
+        .model-select-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
 
         .chat-messages {
             flex: 1;
