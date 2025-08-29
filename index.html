@@ -28,9 +28,6 @@
                 <h2>Umbraix AI</h2>
                 <p>Online • Powered by Gemini 2.5 Flash</p>
             </div>
-            <button class="model-select-button" id="modelSelectButton">
-                <i class="fas fa-cog"></i>
-            </button>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -77,6 +74,9 @@
             <div class="input-area">
                 <button class="mode-button" id="modeButton">
                     <i class="fas fa-plus"></i>
+                </button>
+                <button class="mode-button" id="modelSelectButton">
+                    <i class="fas fa-brain"></i>
                 </button>
                 <input type="text" class="chat-input" id="userInput" placeholder="Message Umbraix AI...">
                 <button class="send-button" id="sendButton">
@@ -448,6 +448,7 @@
         }
 
         function openPopup() {
+            closeModelPopupMenu();
             popupMenu.classList.add('show');
             overlay.classList.add('show');
             updateSelection('mode', currentMode);
@@ -455,10 +456,13 @@
 
         function closePopupMenu() {
             popupMenu.classList.remove('show');
-            overlay.classList.remove('show');
+            if (!modelPopupMenu.classList.contains('show')) {
+                overlay.classList.remove('show');
+            }
         }
 
         function openModelPopup() {
+            closePopupMenu();
             modelPopupMenu.classList.add('show');
             overlay.classList.add('show');
             updateSelection('model', currentModel);
@@ -466,7 +470,9 @@
 
         function closeModelPopupMenu() {
             modelPopupMenu.classList.remove('show');
-            overlay.classList.remove('show');
+            if (!popupMenu.classList.contains('show')) {
+                overlay.classList.remove('show');
+            }
         }
 
         // Event Listeners
