@@ -28,6 +28,9 @@
                 <h2>Umbraix AI</h2>
                 <p>Online • Powered by Gemini 2.5 Flash</p>
             </div>
+            <button class="model-select-button" id="modelSelectButton">
+                <i class="fas fa-cog"></i>
+            </button>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -68,8 +71,26 @@
                     <p>Brainstorming & ideas</p>
                 </div>
             </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="input-area">
+                <button class="mode-button" id="modeButton">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <input type="text" class="chat-input" id="userInput" placeholder="Message Umbraix AI...">
+                <button class="send-button" id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="popup-menu" id="modelPopupMenu">
             <div class="popup-header">
                 <h3>Select Model</h3>
+                <button class="close-popup" id="closeModelPopup">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="model-options">
                 <div class="model-option" data-model="gemini-2.5-pro">
@@ -87,18 +108,6 @@
                     <h4>Gemini 2.0 Flash</h4>
                     <p>Legacy fast model</p>
                 </div>
-            </div>
-        </div>
-        
-        <div class="chat-input-container">
-            <div class="input-area">
-                <button class="mode-button" id="modeButton">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <input type="text" class="chat-input" id="userInput" placeholder="Message Umbraix AI...">
-                <button class="send-button" id="sendButton">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
             </div>
         </div>
     </div>
@@ -122,6 +131,9 @@
         const closePopup = document.getElementById('closePopup');
         const overlay = document.getElementById('overlay');
         const modeOptions = document.querySelectorAll('.mode-option');
+        const modelSelectButton = document.getElementById('modelSelectButton');
+        const modelPopupMenu = document.getElementById('modelPopupMenu');
+        const closeModelPopup = document.getElementById('closeModelPopup');
         const modelOptions = document.querySelectorAll('.model-option');
         const apiSetup = document.getElementById('apiSetup');
 
@@ -439,11 +451,21 @@
             popupMenu.classList.add('show');
             overlay.classList.add('show');
             updateSelection('mode', currentMode);
-            updateSelection('model', currentModel);
         }
 
         function closePopupMenu() {
             popupMenu.classList.remove('show');
+            overlay.classList.remove('show');
+        }
+
+        function openModelPopup() {
+            modelPopupMenu.classList.add('show');
+            overlay.classList.add('show');
+            updateSelection('model', currentModel);
+        }
+
+        function closeModelPopupMenu() {
+            modelPopupMenu.classList.remove('show');
             overlay.classList.remove('show');
         }
 
@@ -460,7 +482,14 @@
             
             modeButton.addEventListener('click', openPopup);
             closePopup.addEventListener('click', closePopupMenu);
-            overlay.addEventListener('click', closePopupMenu);
+
+            modelSelectButton.addEventListener('click', openModelPopup);
+            closeModelPopup.addEventListener('click', closeModelPopupMenu);
+
+            overlay.addEventListener('click', () => {
+                closePopupMenu();
+                closeModelPopupMenu();
+            });
             
             modeOptions.forEach(option => {
                 option.addEventListener('click', function() {
@@ -476,16 +505,21 @@
                     localStorage.setItem('gemini_model', currentModel);
                     updateSelection('model', currentModel);
                     updateChatHeader();
-                    closePopupMenu();
+                    closeModelPopupMenu();
                 });
             });
             
-            // Close popup when clicking outside
+            // Close popups when clicking outside
             document.addEventListener('click', function(e) {
                 if (popupMenu.classList.contains('show') && 
                     !popupMenu.contains(e.target) && 
                     !modeButton.contains(e.target)) {
                     closePopupMenu();
+                }
+                if (modelPopupMenu.classList.contains('show') &&
+                    !modelPopupMenu.contains(e.target) &&
+                    !modelSelectButton.contains(e.target)) {
+                    closeModelPopupMenu();
                 }
             });
             
