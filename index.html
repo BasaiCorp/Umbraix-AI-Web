@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Umbraix AI - Minimalist Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Rubik', sans-serif;
+        }
+
+        :root {
+            --primary: #222222;
+            --primary-dark: #000000;
+            --secondary: #444444;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --user-bg: #f2f2f2;
+            --ai-bg: #ffffff;
+            --border: #e0e0e0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+            --popup-bg: rgba(255, 255, 255, 0.95);
+            --error-bg: #fee;
+            --error-color: #c33;
+            --code-bg: #f8f9fa;
+            --code-border: #e9ecef;
+        }
+
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chat-header img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: white;
+            padding: 3px;
+        }
+
+        .chat-header-info h2 {
+            font-weight: 600;
+            font-size: 1.4rem;
+        }
+
+        .chat-header-info p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" fill="white"/><path d="M0 0L20 20M20 0L0 20" stroke="%23f0f0f0" stroke-width="0.5"/></svg>');
+            background-size: 20px 20px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--user-bg);
+            color: var(--dark);
+            border-bottom-right-radius: 5px;
+            box-shadow: var(--shadow);
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: var(--ai-bg);
+            color: var(--dark);
+            padding: 15px 20px;
+            max-width: 90%;
+            border: 1px solid var(--border);
+        }
+
+        .ai-message p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .ai-message p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Code block styling */
+        .ai-message pre {
+            background: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .ai-message code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--code-border);
+        }
+
+        .ai-message pre code {
+            background: none;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+        }
+
+        .error-message {
+            background: var(--error-bg);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            padding: 15px 20px;
+            display: inline-flex;
+            gap: 5px;
+            background: var(--ai-bg);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--gray);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 15px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid var(--border);
+            border-radius: 50px;
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+            background: #fafafa;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(34, 34, 34, 0.1);
+        }
+
+        .mode-button {
+            background: var(--light-gray);
+            color: var(--gray);
+            border: none;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .mode-button:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(45deg);
+        }
+
+        .send-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .send-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Popup Menu */
+        .popup-menu {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--popup-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            z-index: 100;
+            display: none;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .popup-menu.show {
+            display: block;
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .popup-header h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .close-popup {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--gray);
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .close-popup:hover {
+            background: var(--light-gray);
+        }
+
+        .mode-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .mode-option {
+            padding: 15px;
+            border-radius: 12px;
+            background: white;
+            border: 2px solid var(--border);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mode-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .mode-option i {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .mode-option.active {
+            border-color: var(--primary);
+            background: rgba(34, 34, 34, 0.03);
+        }
+
+        .mode-option.active i {
+            color: var(--primary-dark);
+        }
+
+        .mode-option h4 {
+            font-size: 1rem;
+            margin: 0;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .mode-option p {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin: 0;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 99;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        /* Mode indicator */
+        .mode-indicator {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 8px;
+            background: rgba(34, 34, 34, 0.05);
+            color: var(--primary);
+        }
+
+        /* API Key Setup */
+        .api-setup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .api-setup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .api-setup h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .api-setup input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .api-setup input:focus {
+            border-color: var(--primary);
+        }
+
+        .api-setup button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .api-setup button:hover {
+            background: var(--primary-dark);
+        }
+
+        .api-setup p {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 15px;
+        }
+
+        .api-setup a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Welcome message styling */
+        .welcome-message {
+            text-align: center;
+            padding: 20px;
+            background: rgba(34, 34, 34, 0.03);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            align-self: center;
+            max-width: 80%;
+            border: 1px solid var(--border);
+        }
+
+        .welcome-message h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .welcome-message p {
+            color: var(--gray);
+            font-size: 0.95rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .chat-container {
+                height: 95vh;
+                border-radius: 15px;
+            }
+            
+            .chat-header {
+                padding: 15px;
+            }
+            
+            .chat-header img {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .chat-header-info h2 {
+                font-size: 1.2rem;
+            }
+            
+            .chat-messages {
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            .message {
+                max-width: 90%;
+                padding: 12px 16px;
+                font-size: 0.95rem;
+            }
+            
+            .chat-input-container {
+                padding: 15px;
+            }
+            
+            .input-area {
+                gap: 12px;
+            }
+            
+            .chat-input {
+                padding: 12px 18px;
+                font-size: 0.95rem;
+            }
+            
+            .mode-button, .send-button {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .popup-menu {
+                bottom: 90px;
+                width: 95%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chat-container {
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .chat-header {
+                padding: 12px 15px;
+            }
+            
+            .chat-header-info h2 {
+                font-size: 1.1rem;
+            }
+            
+            .chat-header-info p {
+                font-size: 0.8rem;
+            }
+            
+            .message {
+                max-width: 95%;
+                padding: 10px 14px;
+                font-size: 0.9rem;
+            }
+            
+            .chat-input-container {
+                padding: 12px;
+            }
+            
+            .input-area {
+                gap: 10px;
+            }
+            
+            .chat-input {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .mode-button, .send-button {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2rem;
+            }
+            
+            .popup-menu {
+                bottom: 80px;
+                padding: 15px;
+            }
+            
+            .mode-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body>
+    <!-- API Key Setup Modal -->
+    <div class="api-setup" id="apiSetup">
+        <div class="api-setup-content">
+            <h3>Setup Gemini AI</h3>
+            <p>To use Umbraix AI, you need to provide your Google Gemini API key.</p>
+            <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
+            <button onclick="saveApiKey()">Save & Continue</button>
+            <p>Don't have an API key? <a href="https://aistudio.google.com/app/apikey" target="_blank">Get one here</a></p>
+            <p><small>Your API key is stored locally and never shared.</small></p>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23222222'/><circle cx='35' cy='40' r='5' fill='white'/><circle cx='65' cy='40' r='5' fill='white'/><path d='M30 70 Q50 85 70 70' stroke='white' stroke-width='5' fill='none'/></svg>" alt="Umbraix AI">
+            <div class="chat-header-info">
+                <h2>Umbraix AI</h2>
+                <p>Online • Powered by Gemini 2.5 Flash</p>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <h3>Welcome to Umbraix AI</h3>
+                <p>Ask me anything - I'm here to help with your questions, ideas, and tasks. Use the + button for special modes.</p>
+            </div>
+        </div>
+        
+        <div class="overlay" id="overlay"></div>
+        
+        <div class="popup-menu" id="popupMenu">
+            <div class="popup-header">
+                <h3>Select Mode</h3>
+                <button class="close-popup" id="closePopup">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mode-options">
+                <div class="mode-option active" data-mode="normal">
+                    <i class="fas fa-comment"></i>
+                    <h4>Normal</h4>
+                    <p>Standard conversation</p>
+                </div>
+                <div class="mode-option" data-mode="webSearch">
+                    <i class="fas fa-search"></i>
+                    <h4>Web Search</h4>
+                    <p>Search and analyze information</p>
+                </div>
+                <div class="mode-option" data-mode="think">
+                    <i class="fas fa-lightbulb"></i>
+                    <h4>Think Mode</h4>
+                    <p>Deep analytical thinking</p>
+                </div>
+                <div class="mode-option" data-mode="creative">
+                    <i class="fas fa-paint-brush"></i>
+                    <h4>Creative</h4>
+                    <p>Brainstorming & ideas</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="input-area">
+                <button class="mode-button" id="modeButton">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <input type="text" class="chat-input" id="userInput" placeholder="Message Umbraix AI...">
+                <button class="send-button" id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gemini AI Configuration
+        const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+        let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+        
+        // Chat state
+        let conversationHistory = [];
+        let currentMode = 'normal';
+        let isGenerating = false;
+
+        // DOM elements
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const modeButton = document.getElementById('modeButton');
+        const popupMenu = document.getElementById('popupMenu');
+        const closePopup = document.getElementById('closePopup');
+        const overlay = document.getElementById('overlay');
+        const modeOptions = document.querySelectorAll('.mode-option');
+        const apiSetup = document.getElementById('apiSetup');
+
+        // Mode system prompts
+        const modePrompts = {
+            normal: "You are Umbraix AI, a helpful and friendly assistant. Provide clear, concise, and accurate responses. Be conversational and engaging.",
+            
+            webSearch: "You are Umbraix AI in Web Search mode. Act as if you have access to current web information and provide comprehensive, well-researched responses with specific details and examples. Be thorough and informative.",
+            
+            think: "You are Umbraix AI in Think Mode. Provide deep, analytical responses. Break down complex topics, show your reasoning process, consider multiple perspectives, and provide thoughtful insights. Structure your responses with clear logic and evidence.",
+            
+            creative: "You are Umbraix AI in Creative mode. Be imaginative, innovative, and think outside the box. Provide creative solutions, generate novel ideas, use analogies, and approach problems from unique angles. Be inspiring and original."
+        };
+
+        // Utility function to escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!GEMINI_API_KEY) {
+                showApiSetup();
+            } else {
+                hideApiSetup();
+                addInitialMessage();
+            }
+            
+            updateModeSelection();
+            setupEventListeners();
+        });
+
+        // API Key Management
+        function showApiSetup() {
+            apiSetup.style.display = 'flex';
+        }
+
+        function hideApiSetup() {
+            apiSetup.style.display = 'none';
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (apiKey) {
+                GEMINI_API_KEY = apiKey;
+                localStorage.setItem('gemini_api_key', apiKey);
+                hideApiSetup();
+                addInitialMessage();
+            } else {
+                alert('Please enter a valid API key');
+            }
+        }
+
+        // Fixed formatAIResponse function to handle code properly
+        function formatAIResponse(text) {
+            // First, escape all HTML characters to prevent injection
+            let escapedText = escapeHtml(text);
+            
+            // Handle code blocks first (triple backticks)
+            escapedText = escapedText.replace(/``````/g, function(match, code) {
+                return '<pre><code>' + code.trim() + '</code></pre>';
+            });
+            
+            // Handle inline code (single backticks) - but not if it's inside a code block
+            escapedText = escapedText.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+            
+            // Handle bold text
+            escapedText = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Handle italic text
+            escapedText = escapedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Handle line breaks and paragraphs
+            escapedText = escapedText.replace(/\n\n/g, '</p><p>');
+            escapedText = escapedText.replace(/\n/g, '<br>');
+            
+            // Wrap in paragraph tags
+            escapedText = '<p>' + escapedText + '</p>';
+            
+            // Clean up empty paragraphs
+            escapedText = escapedText.replace(/<p><\/p>/g, '');
+            escapedText = escapedText.replace(/<p>\s*<\/p>/g, '');
+            
+            return escapedText;
+        }
+
+        // Message Management
+        function addMessage(text, isUser = false, isError = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            
+            if (isUser) {
+                messageDiv.classList.add('user-message');
+                messageDiv.textContent = text;
+            } else {
+                messageDiv.classList.add('ai-message');
+                if (isError) {
+                    messageDiv.classList.add('error-message');
+                }
+                
+                // Use the fixed formatting function
+                const formattedText = formatAIResponse(text);
+                messageDiv.innerHTML = formattedText;
+                
+                // Add mode indicator if not normal and not error
+                if (currentMode !== 'normal' && !isError) {
+                    const modeIndicator = document.createElement('span');
+                    modeIndicator.classList.add('mode-indicator');
+                    modeIndicator.textContent = getModeDisplayName(currentMode);
+                    messageDiv.appendChild(modeIndicator);
+                }
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addInitialMessage() {
+            addMessage("Hello! I'm Umbraix AI, powered by Google Gemini 2.5 Flash. How can I help you today?");
+        }
+
+        function getModeDisplayName(mode) {
+            const names = {
+                normal: 'Normal',
+                webSearch: 'Web Search',
+                think: 'Think Mode',
+                creative: 'Creative'
+            };
+            return names[mode] || 'Normal';
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Typing Indicator
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('typing-indicator');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Gemini AI Integration
+        async function callGeminiAPI(message) {
+            const systemPrompt = modePrompts[currentMode];
+            
+            // Build conversation context
+            let conversationContext = [
+                {
+                    role: "user",
+                    parts: [{ text: systemPrompt }]
+                }
+            ];
+
+            // Add conversation history (last 10 messages for context)
+            const recentHistory = conversationHistory.slice(-10);
+            conversationContext = conversationContext.concat(recentHistory);
+
+            // Add current message
+            conversationContext.push({
+                role: "user",
+                parts: [{ text: message }]
+            });
+
+            const requestBody = {
+                contents: conversationContext,
+                generationConfig: {
+                    temperature: currentMode === 'creative' ? 0.9 : 0.7,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 2048,
+                }
+            };
+
+            try {
+                const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    return data.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error('Invalid response format from Gemini API');
+                }
+            } catch (error) {
+                console.error('Gemini API Error:', error);
+                throw error;
+            }
+        }
+
+        // Message Sending
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message || isGenerating) return;
+
+            // Disable input and show loading state
+            isGenerating = true;
+            sendButton.disabled = true;
+            userInput.disabled = true;
+
+            // Add user message
+            addMessage(message, true);
+            userInput.value = '';
+
+            // Add to conversation history
+            conversationHistory.push({
+                role: "user",
+                parts: [{ text: message }]
+            });
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            try {
+                // Call Gemini API
+                const response = await callGeminiAPI(message);
+                
+                // Hide typing indicator
+                hideTypingIndicator();
+                
+                // Add AI response
+                addMessage(response);
+
+                // Add to conversation history
+                conversationHistory.push({
+                    role: "model",
+                    parts: [{ text: response }]
+                });
+
+            } catch (error) {
+                hideTypingIndicator();
+                
+                let errorMessage = 'Sorry, I encountered an error while processing your request. ';
+                
+                if (error.message.includes('API key')) {
+                    errorMessage += 'Please check your API key and try again.';
+                } else if (error.message.includes('quota')) {
+                    errorMessage += 'API quota exceeded. Please try again later.';
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage += 'Network error. Please check your connection and try again.';
+                } else {
+                    errorMessage += 'Please try again.';
+                }
+
+                addMessage(errorMessage, false, true);
+            } finally {
+                // Re-enable input
+                isGenerating = false;
+                sendButton.disabled = false;
+                userInput.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // Mode Management
+        function updateModeSelection() {
+            modeOptions.forEach(option => {
+                const mode = option.getAttribute('data-mode');
+                option.classList.toggle('active', mode === currentMode);
+            });
+        }
+
+        function openPopup() {
+            popupMenu.classList.add('show');
+            overlay.classList.add('show');
+            updateModeSelection();
+        }
+
+        function closePopupMenu() {
+            popupMenu.classList.remove('show');
+            overlay.classList.remove('show');
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            sendButton.addEventListener('click', sendMessage);
+            
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            modeButton.addEventListener('click', openPopup);
+            closePopup.addEventListener('click', closePopupMenu);
+            overlay.addEventListener('click', closePopupMenu);
+            
+            modeOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    currentMode = this.getAttribute('data-mode');
+                    closePopupMenu();
+                });
+            });
+            
+            // Close popup when clicking outside
+            document.addEventListener('click', function(e) {
+                if (popupMenu.classList.contains('show') && 
+                    !popupMenu.contains(e.target) && 
+                    !modeButton.contains(e.target)) {
+                    closePopupMenu();
+                }
+            });
+            
+            // Focus input when page loads
+            userInput.focus();
+
+            // API key input event
+            document.getElementById('apiKeyInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveApiKey();
+                }
+            });
+        }
+
+        // Clear conversation (optional feature)
+        function clearConversation() {
+            conversationHistory = [];
+            chatMessages.innerHTML = `
+                <div class="welcome-message">
+                    <h3>Welcome to Umbraix AI</h3>
+                    <p>Ask me anything - I'm here to help with your questions, ideas, and tasks. Use the + button for special modes.</p>
+                </div>
+            `;
+            addInitialMessage();
+        }
+
+        // Make clearConversation available globally for debugging
+        window.clearConversation = clearConversation;
+        
+    </script>
+</body>
+</html>
