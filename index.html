@@ -12,10 +12,17 @@
     <!-- API Key Setup Modal -->
     <div class="api-setup" id="apiSetup">
         <div class="api-setup-content">
-            <h3>Setup Gemini AI</h3>
-            <p>To use Umbraix AI, you need to provide your Google Gemini API key.</p>
-            <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
-            <button onclick="saveApiKey()">Save & Continue</button>
+            <h3 id="apiSetupTitle">Setup Gemini AI</h3>
+            <p id="apiSetupSubtitle">To use Umbraix AI, you need to provide your Google Gemini API key.</p>
+            <div class="api-key-input-container">
+                <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
+                <button id="toggleApiVisibility" class="api-key-action-button"><i class="fas fa-eye"></i></button>
+            </div>
+            <div class="api-setup-actions">
+                <button id="saveApiKeyButton">Save & Continue</button>
+                <button id="copyApiKey">Copy Key</button>
+                <button id="removeApiKeyButton" class="remove-button">Remove Key</button>
+            </div>
             <p>Don't have an API key? <a href="https://aistudio.google.com/app/apikey" target="_blank">Get one here</a></p>
             <p><small>Your API key is stored locally and never shared.</small></p>
         </div>
@@ -109,6 +116,7 @@
                     <p>Legacy fast model</p>
                 </div>
             </div>
+            <button class="manage-api-button" id="manageApiButton">Manage API Key</button>
         </div>
     </div>
 
@@ -136,6 +144,14 @@
         const closeModelPopup = document.getElementById('closeModelPopup');
         const modelOptions = document.querySelectorAll('.model-option');
         const apiSetup = document.getElementById('apiSetup');
+        const manageApiButton = document.getElementById('manageApiButton');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const toggleApiVisibility = document.getElementById('toggleApiVisibility');
+        const copyApiKey = document.getElementById('copyApiKey');
+        const saveApiKeyButton = document.getElementById('saveApiKeyButton');
+        const removeApiKeyButton = document.getElementById('removeApiKeyButton');
+        const apiSetupTitle = document.getElementById('apiSetupTitle');
+        const apiSetupSubtitle = document.getElementById('apiSetupSubtitle');
 
         // Mode system prompts
         const modePrompts = {
@@ -185,12 +201,14 @@
         }
 
         function saveApiKey() {
-            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const apiKey = apiKeyInput.value.trim();
             if (apiKey) {
                 GEMINI_API_KEY = apiKey;
                 localStorage.setItem('gemini_api_key', apiKey);
                 hideApiSetup();
-                addInitialMessage();
+                if (conversationHistory.length === 0) {
+                    addInitialMessage();
+                }
             } else {
                 alert('Please enter a valid API key');
             }
@@ -514,6 +532,38 @@
                     closeModelPopupMenu();
                 });
             });
+
+            manageApiButton.addEventListener('click', () => {
+                closeModelPopupMenu();
+                apiSetupTitle.textContent = 'Manage API Key';
+                apiSetupSubtitle.style.display = 'none';
+                apiKeyInput.value = GEMINI_API_KEY;
+                showApiSetup();
+            });
+
+            toggleApiVisibility.addEventListener('click', () => {
+                const isPassword = apiKeyInput.type === 'password';
+                apiKeyInput.type = isPassword ? 'text' : 'password';
+                toggleApiVisibility.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+            });
+
+            copyApiKey.addEventListener('click', () => {
+                navigator.clipboard.writeText(apiKeyInput.value).then(() => {
+                    alert('API Key copied to clipboard!');
+                });
+            });
+
+            removeApiKeyButton.addEventListener('click', () => {
+                if (confirm('Are you sure you want to remove your API key?')) {
+                    localStorage.removeItem('gemini_api_key');
+                    GEMINI_API_KEY = '';
+                    apiKeyInput.value = '';
+                    apiSetupTitle.textContent = 'Setup Gemini AI';
+                    apiSetupSubtitle.style.display = 'block';
+                }
+            });
+
+            saveApiKeyButton.addEventListener('click', saveApiKey);
             
             // Close popups when clicking outside
             document.addEventListener('click', function(e) {
@@ -533,7 +583,7 @@
             userInput.focus();
 
             // API key input event
-            document.getElementById('apiKeyInput').addEventListener('keypress', function(e) {
+            apiKeyInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     saveApiKey();
                 }
