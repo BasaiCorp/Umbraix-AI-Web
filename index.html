@@ -82,6 +82,11 @@
                     <h4>Creative</h4>
                     <p>Brainstorming & ideas</p>
                 </div>
+                <div class="mode-option" data-mode="imagen">
+                    <i class="fas fa-image"></i>
+                    <h4>Imagen</h4>
+                    <p>Generate images from text</p>
+                </div>
             </div>
         </div>
 
@@ -119,6 +124,16 @@
                     <i class="fas fa-rocket"></i>
                     <h4>Gemini 2.0 Flash</h4>
                     <p>Legacy fast model</p>
+                </div>
+                <div class="model-option" data-model="gemini-2.5-flash-image-preview">
+                    <i class="fas fa-image"></i>
+                    <h4>Gemini 2.5 Flash Image</h4>
+                    <p>Conversational image generation</p>
+                </div>
+                <div class="model-option" data-model="imagen-4.0-generate-001">
+                    <i class="fas fa-camera-retro"></i>
+                    <h4>Imagen 4.0</h4>
+                    <p>Dedicated image generation</p>
                 </div>
             </div>
             <button class="manage-api-button" id="manageApiButton">Manage API Key</button>
@@ -166,7 +181,9 @@
             
             think: "You are Umbraix AI in Think Mode. Provide deep, analytical responses. Break down complex topics, show your reasoning process, consider multiple perspectives, and provide thoughtful insights. Structure your responses with clear logic and evidence.",
             
-            creative: "You are Umbraix AI in Creative mode. Be imaginative, innovative, and think outside the box. Provide creative solutions, generate novel ideas, use analogies, and approach problems from unique angles. Be inspiring and original."
+            creative: "You are Umbraix AI in Creative mode. Be imaginative, innovative, and think outside the box. Provide creative solutions, generate novel ideas, use analogies, and approach problems from unique angles. Be inspiring and original.",
+
+            imagen: "You are Umbraix AI in Imagen mode. Generate an image based on the user's prompt. You should only respond with the image, no text."
         };
 
         // Utility function to escape HTML
@@ -181,6 +198,16 @@
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
+        function loadGeneratedImages() {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('generated_image_')) {
+                    const imageData = JSON.parse(localStorage.getItem(key));
+                    addMessage(imageData.imageUrl, false, false, imageData.prompt);
+                }
+            }
+        }
+
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
             if (!GEMINI_API_KEY) {
@@ -188,6 +215,7 @@
             } else {
                 hideApiSetup();
                 addInitialMessage();
+                loadGeneratedImages();
             }
             
             updateSelection('mode', currentMode);
@@ -253,7 +281,7 @@
         }
 
         // Message Management
-        function addMessage(text, isUser = false, isError = false) {
+        function addMessage(text, isUser = false, isError = false, prompt = null) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
             
@@ -265,10 +293,24 @@
                 if (isError) {
                     messageDiv.classList.add('error-message');
                 }
+
+                if (prompt) {
+                    const promptDiv = document.createElement('div');
+                    promptDiv.classList.add('prompt-text');
+                    promptDiv.textContent = prompt;
+                    messageDiv.appendChild(promptDiv);
+                }
                 
-                // Use the fixed formatting function
-                const formattedText = formatAIResponse(text);
-                messageDiv.innerHTML = formattedText;
+                if (text.startsWith('data:image/')) {
+                    const img = document.createElement('img');
+                    img.src = text;
+                    img.classList.add('generated-image');
+                    messageDiv.appendChild(img);
+                } else {
+                    // Use the fixed formatting function
+                    const formattedText = formatAIResponse(text);
+                    messageDiv.innerHTML = formattedText;
+                }
                 
                 // Add mode indicator if not normal and not error
                 if (currentMode !== 'normal' && !isError) {
@@ -293,12 +335,15 @@
                     normal: 'Normal',
                     webSearch: 'Web Search',
                     think: 'Think Mode',
-                    creative: 'Creative'
+                    creative: 'Creative',
+                    imagen: 'Imagen'
                 },
                 model: {
                     'gemini-2.5-pro': 'Gemini 2.5 Pro',
                     'gemini-2.5-flash': 'Gemini 2.5 Flash',
-                    'gemini-2.0-flash': 'Gemini 2.0 Flash'
+                    'gemini-2.0-flash': 'Gemini 2.0 Flash',
+                    'gemini-2.5-flash-image-preview': 'Gemini 2.5 Flash Image',
+                    'imagen-4.0-generate-001': 'Imagen 4.0'
                 }
             };
             return names[type][value] || value;
@@ -397,6 +442,104 @@
             }
         }
 
+        async function callImagen4API(message) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_API_KEY}`;
+
+            const requestBody = {
+                "instances": [
+                    {
+                        "prompt": message
+                    }
+                ],
+                "parameters": {
+                    "sampleCount": 1
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.predictions && data.predictions[0] && data.predictions[0].image) {
+                    const imageUrl = `data:image/png;base64,${data.predictions[0].image.bytesBase64Encoded}`;
+                    const imageId = `generated_image_${Date.now()}`;
+                    const imageData = {
+                        prompt: message,
+                        imageUrl: imageUrl
+                    };
+                    localStorage.setItem(imageId, JSON.stringify(imageData));
+                    return imageUrl;
+                }
+
+                throw new Error('No image data found in response');
+
+            } catch (error) {
+                console.error('Imagen 4 API Error:', error);
+                throw error;
+            }
+        }
+
+        async function callGeminiFlashImageAPI(message) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${GEMINI_API_KEY}`;
+
+            const requestBody = {
+                contents: [{
+                    parts: [
+                        { "text": message }
+                    ]
+                }]
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const imagePart = data.candidates[0].content.parts.find(part => part.inline_data);
+                    if (imagePart) {
+                        const imageUrl = `data:image/png;base64,${imagePart.inline_data.data}`;
+                        const imageId = `generated_image_${Date.now()}`;
+                        const imageData = {
+                            prompt: message,
+                            imageUrl: imageUrl
+                        };
+                        localStorage.setItem(imageId, JSON.stringify(imageData));
+                        return imageUrl;
+                    }
+                }
+
+                throw new Error('No image data found in response');
+
+            } catch (error) {
+                console.error('Imagen API Error:', error);
+                throw error;
+            }
+        }
+
         // Message Sending
         async function sendMessage() {
             const message = userInput.value.trim();
@@ -421,14 +564,29 @@
             showTypingIndicator();
 
             try {
-                // Call Gemini API
-                const response = await callGeminiAPI(message);
+                let response;
+                if (currentMode === 'imagen') {
+                    if (currentModel === 'gemini-2.5-flash-image-preview') {
+                        response = await callGeminiFlashImageAPI(message);
+                    } else if (currentModel === 'imagen-4.0-generate-001') {
+                        response = await callImagen4API(message);
+                    } else {
+                        // Default to flash image API if no specific image model is selected
+                        response = await callGeminiFlashImageAPI(message);
+                    }
+                } else {
+                    response = await callGeminiAPI(message);
+                }
                 
                 // Hide typing indicator
                 hideTypingIndicator();
                 
                 // Add AI response
-                addMessage(response);
+                if (currentMode === 'imagen') {
+                    addMessage(response, false, false, message);
+                } else {
+                    addMessage(response);
+                }
 
                 // Add to conversation history
                 conversationHistory.push({

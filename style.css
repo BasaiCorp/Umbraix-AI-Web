@@ -142,6 +142,19 @@
             margin-bottom: 0;
         }
 
+.generated-image {
+    max-width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.prompt-text {
+    font-size: 0.9rem;
+    color: var(--gray);
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
         /* Code block styling */
         .ai-message pre {
             background: var(--code-bg);
