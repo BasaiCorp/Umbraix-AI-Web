@@ -484,7 +484,7 @@
         }
 
         #apiKeyInput {
-            padding-right: 80px !important;
+            padding-right: 40px !important;
         }
 
         .api-key-action-button {
@@ -496,12 +496,16 @@
             border: none;
             color: var(--gray);
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1rem;
             padding: 5px;
         }
 
         #copyApiKey {
-            right: 45px;
+            background: var(--secondary);
+        }
+
+        #copyApiKey:hover {
+            background: var(--dark);
         }
 
         .api-setup-actions {
