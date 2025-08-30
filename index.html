@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="splash-screen">
+        <img src="img/logo_transparant.png" alt="Umbraix AI Loading">
+    </div>
+
     <!-- API Key Setup Modal -->
     <div class="api-setup" id="apiSetup">
         <div class="api-setup-content">
@@ -605,6 +609,23 @@
 
         // Make clearConversation available globally for debugging
         window.clearConversation = clearConversation;
+
+        // Splash screen logic
+        window.addEventListener('load', () => {
+            const splash = document.getElementById('splash-screen');
+
+            // Start the fade out
+            setTimeout(() => {
+                splash.classList.add('hidden');
+            }, 2000);
+
+            // Remove from DOM after transition
+            splash.addEventListener('transitionend', (e) => {
+                if (e.propertyName === 'opacity') {
+                    splash.style.display = 'none';
+                }
+            });
+        });
         
     </script>
 </body>
