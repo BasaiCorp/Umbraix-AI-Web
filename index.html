@@ -36,14 +36,18 @@
 
     <div class="chat-container">
         <div class="chat-header">
-            <img src="img/logo_round.png" alt="Umbraix AI">
-            <div class="chat-header-info">
-                <h2>Umbraix AI</h2>
-                <p>Online • Powered by Gemini 2.5 Flash</p>
+            <div class="chat-header-left">
+                <img src="img/logo_round.png" alt="Umbraix AI">
+                <div class="chat-title">
+                    <h2>Umbraix AI</h2>
+                    <p>Powered by <span id="modelName">Gemini 2.5 Flash</span></p>
+                </div>
             </div>
-            <button class="model-select-button" id="modelSelectButton">
-                <i class="fas fa-cog"></i>
-            </button>
+            <div class="chat-header-right">
+                <button class="header-action-button" id="modelSelectButton">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+            </div>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -395,11 +399,10 @@
         }
 
         function updateChatHeader() {
-            const headerInfo = document.querySelector('.chat-header-info');
-            headerInfo.innerHTML = `
-                <h2>Umbraix AI</h2>
-                <p>Online • Powered by ${getDisplayName('model', currentModel)}</p>
-            `;
+            const modelNameSpan = document.getElementById('modelName');
+            if (modelNameSpan) {
+                modelNameSpan.textContent = getDisplayName('model', currentModel);
+            }
         }
 
         function scrollToBottom() {
