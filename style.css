@@ -400,7 +400,7 @@
         .send-button {
             background: var(--light-gray);
             color: var(--gray);
-            border: 1px solid var(--border);
+            border: none;
             width: 55px;
             height: 55px;
             border-radius: 12px;
@@ -412,10 +412,14 @@
             transition: var(--transition);
         }
 
+        .send-button.active {
+            background: var(--primary);
+            color: white;
+        }
+
         .send-button:hover {
             background: var(--primary);
             color: white;
-            border-color: var(--primary);
         }
 
         .send-button:active {

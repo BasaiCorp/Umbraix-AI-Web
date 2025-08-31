@@ -632,6 +632,7 @@
             // Add user message
             addMessage(message, true);
             userInput.value = '';
+            sendButton.classList.remove('active');
 
             // Add to conversation history
             conversationHistory.push({
@@ -836,6 +837,15 @@
             apiKeyInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     saveApiKey();
+                }
+            });
+
+            // Send button active state
+            userInput.addEventListener('input', () => {
+                if (userInput.value.trim() !== '') {
+                    sendButton.classList.add('active');
+                } else {
+                    sendButton.classList.remove('active');
                 }
             });
         }
