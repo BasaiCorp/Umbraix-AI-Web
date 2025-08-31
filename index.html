@@ -18,19 +18,41 @@
     <!-- API Key Setup Modal -->
     <div class="api-setup" id="apiSetup">
         <div class="api-setup-content">
-            <h3 id="apiSetupTitle">Setup Gemini AI</h3>
-            <p id="apiSetupSubtitle">To use Umbraix AI, you need to provide your Google Gemini API key.</p>
-            <div class="api-key-input-container">
-                <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
-                <button id="toggleApiVisibility" class="api-key-action-button"><i class="fas fa-eye"></i></button>
+            <div class="api-popup-header">
+                <h3>API Key Management</h3>
+                <button class="close-popup" id="closeApiSetup"><i class="fas fa-times"></i></button>
             </div>
-            <div class="api-setup-actions">
-                <button id="saveApiKeyButton">Save & Continue</button>
-                <button id="copyApiKey">Copy Key</button>
-                <button id="removeApiKeyButton" class="remove-button">Remove Key</button>
+            <div class="api-tabs">
+                <button class="api-tab-button active" data-tab="gemini">Gemini</button>
+                <button class="api-tab-button" data-tab="openrouter">OpenRouter</button>
             </div>
-            <p>Don't have an API key? <a href="https://aistudio.google.com/app/apikey" target="_blank">Get one here</a></p>
-            <p><small>Your API key is stored locally and never shared.</small></p>
+            <div id="gemini-settings" class="api-tab-content active">
+                <h4>Google Gemini API</h4>
+                <p>High-quality models from Google.</p>
+                <div class="api-key-input-container">
+                    <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key">
+                    <button class="toggle-api-visibility" data-input="geminiApiKeyInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-setup-actions">
+                    <button id="saveGeminiApiKey">Save Key</button>
+                    <button id="removeGeminiApiKey" class="remove-button">Remove Key</button>
+                </div>
+                <p class="api-link">Get a key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></p>
+            </div>
+            <div id="openrouter-settings" class="api-tab-content">
+                <h4>OpenRouter API</h4>
+                <p>Access a wide variety of models.</p>
+                <div class="api-key-input-container">
+                    <input type="password" id="openRouterApiKeyInput" placeholder="Enter your OpenRouter API key">
+                    <button class="toggle-api-visibility" data-input="openRouterApiKeyInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-setup-actions">
+                    <button id="saveOpenRouterApiKey">Save Key</button>
+                    <button id="removeOpenRouterApiKey" class="remove-button">Remove Key</button>
+                </div>
+                <p class="api-link">Get a key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a></p>
+            </div>
+            <p class="api-storage-notice"><small>Your API keys are stored locally and never shared.</small></p>
         </div>
     </div>
 
@@ -126,6 +148,10 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+            <div class="search-bar-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="modelSearchInput" placeholder="Search models...">
+            </div>
             <div class="model-options">
                 <div class="model-option" data-model="gemini-2.5-pro">
                     <i class="fas fa-brain"></i>
@@ -163,13 +189,20 @@
                     </div>
                 </div>
             </div>
-            <button class="manage-api-button" id="manageApiButton">Manage API Key</button>
+            <div class="popup-footer">
+                <button class="manage-api-button" id="manageApiButton">Manage API Keys</button>
+                <button class="refresh-models-button" id="refreshModelsButton">
+                    <i class="fas fa-sync-alt"></i> Refresh Models
+                </button>
+            </div>
         </div>
     </div>
 
+    <script src="openrouter.js"></script>
     <script>
-        // Gemini AI Configuration
+        // API Key Configuration
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+        let OPENROUTER_API_KEY = localStorage.getItem('openrouter_api_key') || '';
         
         // Chat state
         let conversationHistory = [];
@@ -192,13 +225,19 @@
         const modelOptions = document.querySelectorAll('.model-option');
         const apiSetup = document.getElementById('apiSetup');
         const manageApiButton = document.getElementById('manageApiButton');
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const toggleApiVisibility = document.getElementById('toggleApiVisibility');
-        const copyApiKey = document.getElementById('copyApiKey');
-        const saveApiKeyButton = document.getElementById('saveApiKeyButton');
-        const removeApiKeyButton = document.getElementById('removeApiKeyButton');
-        const apiSetupTitle = document.getElementById('apiSetupTitle');
-        const apiSetupSubtitle = document.getElementById('apiSetupSubtitle');
+        const closeApiSetup = document.getElementById('closeApiSetup');
+        const apiTabs = document.querySelectorAll('.api-tab-button');
+        const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+        const openRouterApiKeyInput = document.getElementById('openRouterApiKeyInput');
+        const saveGeminiApiKey = document.getElementById('saveGeminiApiKey');
+        const removeGeminiApiKey = document.getElementById('removeGeminiApiKey');
+        const saveOpenRouterApiKey = document.getElementById('saveOpenRouterApiKey');
+        const removeOpenRouterApiKey = document.getElementById('removeOpenRouterApiKey');
+        const toggleApiVisibilityButtons = document.querySelectorAll('.toggle-api-visibility');
+        const refreshModelsButton = document.getElementById('refreshModelsButton');
+
+        let allModels = [];
+        const modelSearchInput = document.getElementById('modelSearchInput');
 
         // Mode system prompts
         const modePrompts = {
@@ -237,7 +276,7 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            if (!GEMINI_API_KEY) {
+            if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
                 showApiSetup();
             } else {
                 hideApiSetup();
@@ -246,13 +285,15 @@
             }
             
             updateSelection('mode', currentMode);
-            updateSelection('model', currentModel);
             updateChatHeader();
             setupEventListeners();
+            populateModels();
         });
 
         // API Key Management
         function showApiSetup() {
+            geminiApiKeyInput.value = GEMINI_API_KEY;
+            openRouterApiKeyInput.value = OPENROUTER_API_KEY;
             apiSetup.style.display = 'flex';
         }
 
@@ -260,17 +301,39 @@
             apiSetup.style.display = 'none';
         }
 
-        function saveApiKey() {
-            const apiKey = apiKeyInput.value.trim();
-            if (apiKey) {
-                GEMINI_API_KEY = apiKey;
-                localStorage.setItem('gemini_api_key', apiKey);
-                hideApiSetup();
-                if (conversationHistory.length === 0) {
-                    addInitialMessage();
-                }
+        function saveApiKey(keyType) {
+            let key, input;
+            if (keyType === 'gemini') {
+                input = geminiApiKeyInput;
+                key = input.value.trim();
+                GEMINI_API_KEY = key;
+                localStorage.setItem('gemini_api_key', key);
             } else {
-                alert('Please enter a valid API key');
+                input = openRouterApiKeyInput;
+                key = input.value.trim();
+                OPENROUTER_API_KEY = key;
+                localStorage.setItem('openrouter_api_key', key);
+            }
+            alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key saved!`);
+            hideApiSetup();
+            if (conversationHistory.length === 0) {
+                addInitialMessage();
+            }
+            populateModels(); // Refresh models after adding a key
+        }
+
+        function removeApiKey(keyType) {
+            if (confirm(`Are you sure you want to remove your ${keyType} API key?`)) {
+                if (keyType === 'gemini') {
+                    localStorage.removeItem('gemini_api_key');
+                    GEMINI_API_KEY = '';
+                    geminiApiKeyInput.value = '';
+                } else {
+                    localStorage.removeItem('openrouter_api_key');
+                    OPENROUTER_API_KEY = '';
+                    openRouterApiKeyInput.value = '';
+                }
+                alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key removed.`);
             }
         }
 
@@ -462,27 +525,97 @@
         }
 
         // Gemini AI Integration
+        async function populateModels() {
+            const modelOptionsContainer = modelPopupMenu.querySelector('.model-options');
+            modelOptionsContainer.innerHTML = ''; // Clear existing models
+
+            const staticGeminiModels = [
+                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful model', provider: 'gemini' },
+                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast and efficient', provider: 'gemini' },
+                { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Legacy fast model', provider: 'gemini' },
+                { id: 'gemini-2.5-flash-image-preview', name: 'Gemini 2.5 Flash Image', description: 'Conversational image generation', provider: 'gemini' },
+                { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0', description: 'Dedicated image generation', provider: 'gemini' }
+            ];
+
+            allModels = staticGeminiModels.map(m => ({...m, provider: 'gemini'}));
+
+            if (OPENROUTER_API_KEY) {
+                try {
+                    const openRouterModels = await fetchOpenRouterModels(OPENROUTER_API_KEY);
+                    const mappedModels = openRouterModels.map(model => ({
+                        id: model.id,
+                        name: model.name,
+                        description: `Provider: ${model.context_length}`,
+                        provider: 'openrouter'
+                    }));
+                    allModels = allModels.concat(mappedModels);
+                } catch (error) {
+                    console.error("Failed to fetch OpenRouter models:", error);
+                }
+            }
+
+            displayModels(allModels);
+
+            // Set default or saved model
+            currentModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+            updateSelection('model', currentModel);
+            updateChatHeader();
+        }
+
+        function displayModels(modelsToDisplay) {
+            const modelOptionsContainer = modelPopupMenu.querySelector('.model-options');
+            modelOptionsContainer.innerHTML = '';
+
+            modelsToDisplay.forEach(model => {
+                const option = document.createElement('div');
+                option.className = 'model-option';
+                option.setAttribute('data-model', model.id);
+                option.innerHTML = `
+                    <i class="fas fa-robot"></i>
+                    <div class="option-text">
+                        <h4>${escapeHtml(model.name)}</h4>
+                        <p>${escapeHtml(model.description)}</p>
+                    </div>
+                `;
+                modelOptionsContainer.appendChild(option);
+
+                option.addEventListener('click', function() {
+                    currentModel = this.getAttribute('data-model');
+                    localStorage.setItem('gemini_model', currentModel);
+                    updateSelection('model', currentModel);
+                    updateChatHeader();
+                    closeModelPopupMenu();
+                });
+            });
+        }
+
+        async function callApi(message) {
+            const modelData = allModels.find(m => m.id === currentModel);
+            if (!modelData) {
+                throw new Error("Selected model not found!");
+            }
+
+            if (modelData.provider === 'openrouter') {
+                if (!OPENROUTER_API_KEY) throw new Error("OpenRouter API key not set.");
+                const history = conversationHistory.map(item => ({
+                    role: item.role === 'model' ? 'assistant' : 'user',
+                    content: item.parts[0].text
+                }));
+                return await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, history);
+            } else {
+                // Default to Gemini
+                if (!GEMINI_API_KEY) throw new Error("Gemini API key not set.");
+                return await callGeminiAPI(message);
+            }
+        }
+
         async function callGeminiAPI(message) {
             const systemPrompt = modePrompts[currentMode];
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
-            
-            // Build conversation context
-            let conversationContext = [
-                {
-                    role: "user",
-                    parts: [{ text: systemPrompt }]
-                }
-            ];
 
-            // Add conversation history (last 10 messages for context)
-            const recentHistory = conversationHistory.slice(-10);
-            conversationContext = conversationContext.concat(recentHistory);
-
-            // Add current message
-            conversationContext.push({
-                role: "user",
-                parts: [{ text: message }]
-            });
+            let conversationContext = [{ role: "user", parts: [{ text: systemPrompt }] }];
+            conversationContext = conversationContext.concat(conversationHistory.slice(-10));
+            conversationContext.push({ role: "user", parts: [{ text: message }] });
 
             const requestBody = {
                 contents: conversationContext,
@@ -494,31 +627,21 @@
                 }
             };
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody)
-                });
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    return data.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error('Invalid response format from Gemini API');
-                }
-            } catch (error) {
-                console.error('Gemini API Error:', error);
-                throw error;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
             }
+            const data = await response.json();
+            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                return data.candidates[0].content.parts[0].text;
+            }
+            throw new Error('Invalid response format from Gemini API');
         }
 
         async function callImagen4API(message) {
@@ -659,7 +782,7 @@
                         response = await callGeminiFlashImageAPI(message);
                     }
                 } else {
-                    response = await callGeminiAPI(message);
+                    response = await callApi(message);
                 }
                 
                 // Hide typing indicator
@@ -786,36 +909,43 @@
 
             manageApiButton.addEventListener('click', () => {
                 closeModelPopupMenu();
-                apiSetupTitle.textContent = 'Manage API Key';
-                apiSetupSubtitle.style.display = 'none';
-                apiKeyInput.value = GEMINI_API_KEY;
                 showApiSetup();
             });
 
-            toggleApiVisibility.addEventListener('click', () => {
-                const isPassword = apiKeyInput.type === 'password';
-                apiKeyInput.type = isPassword ? 'text' : 'password';
-                toggleApiVisibility.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-            });
+            closeApiSetup.addEventListener('click', hideApiSetup);
 
-            copyApiKey.addEventListener('click', () => {
-                navigator.clipboard.writeText(apiKeyInput.value).then(() => {
-                    alert('API Key copied to clipboard!');
+            apiTabs.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tab = button.dataset.tab;
+                    document.querySelectorAll('.api-tab-content').forEach(content => content.classList.remove('active'));
+                    document.getElementById(`${tab}-settings`).classList.add('active');
+                    document.querySelectorAll('.api-tab-button').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
                 });
             });
 
-            removeApiKeyButton.addEventListener('click', () => {
-                if (confirm('Are you sure you want to remove your API key?')) {
-                    localStorage.removeItem('gemini_api_key');
-                    GEMINI_API_KEY = '';
-                    apiKeyInput.value = '';
-                    apiSetupTitle.textContent = 'Setup Gemini AI';
-                    apiSetupSubtitle.style.display = 'block';
-                }
+            toggleApiVisibilityButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const inputId = button.dataset.input;
+                    const input = document.getElementById(inputId);
+                    const isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    button.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+                });
             });
 
-            saveApiKeyButton.addEventListener('click', saveApiKey);
-            
+            saveGeminiApiKey.addEventListener('click', () => saveApiKey('gemini'));
+            removeGeminiApiKey.addEventListener('click', () => removeApiKey('gemini'));
+            saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
+            removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
+            refreshModelsButton.addEventListener('click', populateModels);
+
+            modelSearchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredModels = allModels.filter(model => model.name.toLowerCase().includes(searchTerm));
+                displayModels(filteredModels);
+            });
+
             // Close popups when clicking outside
             document.addEventListener('click', function(e) {
                 if (popupMenu.classList.contains('show') && 
