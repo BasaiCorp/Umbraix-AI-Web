@@ -50,6 +50,7 @@
                 <h3>Welcome to Umbraix AI</h3>
                 <p>Ask me anything - I'm here to help with your questions, ideas, and tasks. Use the + button for special modes.</p>
             </div>
+            <div class="thinking-indicator" id="thinkingIndicator">Thinking...</div>
         </div>
         
         <div class="overlay" id="overlay"></div>
@@ -86,6 +87,7 @@
                     <i class="fas fa-image"></i>
                     <h4>Imagen</h4>
                     <p>Generate images from text</p>
+                    <span class="paid-notice">Paid API key required</span>
                 </div>
             </div>
         </div>
@@ -365,7 +367,7 @@
         function showTypingIndicator() {
             const typingDiv = document.createElement('div');
             typingDiv.classList.add('typing-indicator');
-            typingDiv.id = 'typingIndicator';
+            typingDiv.id = 'typingIndicatorOld';
             typingDiv.innerHTML = `
                 <div class="typing-dot"></div>
                 <div class="typing-dot"></div>
@@ -376,10 +378,21 @@
         }
 
         function hideTypingIndicator() {
-            const typingIndicator = document.getElementById('typingIndicator');
+            const typingIndicator = document.getElementById('typingIndicatorOld');
             if (typingIndicator) {
                 typingIndicator.remove();
             }
+        }
+
+        function showThinkingIndicator() {
+            const thinkingIndicator = document.getElementById('thinkingIndicator');
+            thinkingIndicator.style.display = 'block';
+            scrollToBottom();
+        }
+
+        function hideThinkingIndicator() {
+            const thinkingIndicator = document.getElementById('thinkingIndicator');
+            thinkingIndicator.style.display = 'none';
         }
 
         // Gemini AI Integration
@@ -561,7 +574,11 @@
             });
 
             // Show typing indicator
-            showTypingIndicator();
+            if (currentModel === 'gemini-2.5-pro' && currentMode === 'think') {
+                showThinkingIndicator();
+            } else {
+                showTypingIndicator();
+            }
 
             try {
                 let response;
@@ -579,7 +596,11 @@
                 }
                 
                 // Hide typing indicator
-                hideTypingIndicator();
+                if (currentModel === 'gemini-2.5-pro' && currentMode === 'think') {
+                    hideThinkingIndicator();
+                } else {
+                    hideTypingIndicator();
+                }
                 
                 // Add AI response
                 if (currentMode === 'imagen') {
