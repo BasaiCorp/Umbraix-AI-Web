@@ -430,13 +430,15 @@
         /* Popup Menu */
         .popup-menu {
             position: absolute;
-            top: 80px; /* Position below the header */
-            right: 25px; /* Align with the right side of the header */
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
             background: #ffffff;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             padding: 15px;
-            width: 320px;
+            width: 90%;
+            max-width: 400px;
             z-index: 100;
             display: none;
             border: 1px solid var(--border);
@@ -447,7 +449,12 @@
 
         .popup-menu.show {
             display: block;
-            animation: fadeIn 0.2s ease forwards;
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate(-50%, 20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
         }
 
         .popup-header {
