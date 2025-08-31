@@ -201,6 +201,57 @@
             border-radius: 0;
         }
 
+        /* New Code Block Styling */
+        .code-block-container {
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 15px 0;
+            border: 1px solid var(--border);
+        }
+
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #3a3a3a;
+            padding: 8px 15px;
+            color: var(--light-gray);
+        }
+
+        .language-name {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .copy-code-button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: var(--transition);
+        }
+
+        .copy-code-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .copy-code-button .fas {
+            font-size: 0.9rem;
+        }
+
+        .ai-message .code-block-container pre {
+            margin: 0;
+            border-radius: 0 0 8px 8px;
+            border: none;
+        }
+
         .error-message {
             background: var(--error-bg);
             color: var(--error-color);
