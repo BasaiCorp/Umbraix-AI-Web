@@ -535,14 +535,14 @@
             font-weight: 500;
         }
 
-        .mode-option h4 {
+        .option-text h4 {
             font-size: 1rem;
             margin: 0;
             color: var(--dark);
             font-weight: 500;
         }
 
-        .mode-option p {
+        .option-text p {
             font-size: 0.8rem;
             color: var(--gray);
             margin: 0;
