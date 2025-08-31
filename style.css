@@ -698,8 +698,90 @@
             transition: var(--transition);
         }
 
-        .manage-api-button:hover {
+        .manage-api-button:hover, .refresh-models-button:hover {
             background: var(--border);
+        }
+
+        .popup-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .refresh-models-button {
+            background: var(--light-gray);
+            border: 1px solid var(--border);
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            flex-grow: 1;
+        }
+
+        .refresh-models-button i {
+            margin-right: 5px;
+        }
+
+        .api-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .api-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .api-tab-button {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .api-tab-button.active {
+            background: var(--light-gray);
+            border-color: var(--primary);
+        }
+
+        .api-tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .api-tab-content.active {
+            display: block;
+        }
+
+        .api-tab-content h4 {
+            margin-bottom: 5px;
+        }
+
+        .api-tab-content p {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 15px;
+        }
+
+        .api-link {
+            font-size: 0.8rem !important;
+            margin-top: 10px;
+        }
+
+        .api-storage-notice {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
         }
 
         .api-setup p {
