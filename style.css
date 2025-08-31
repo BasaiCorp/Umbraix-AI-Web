@@ -664,11 +664,11 @@
             margin: 15px 0;
         }
 
-        #apiKeyInput {
-            padding-right: 40px !important;
+        .api-key-input-container input {
+            padding-right: 45px !important;
         }
 
-        .api-key-action-button {
+        .toggle-api-visibility {
             position: absolute;
             right: 10px;
             top: 50%;
@@ -679,6 +679,17 @@
             cursor: pointer;
             font-size: 1rem;
             padding: 5px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .toggle-api-visibility:hover {
+            background: var(--light-gray);
         }
 
         #copyApiKey {
@@ -728,16 +739,17 @@
             background: #a00 !important;
         }
 
-        .manage-api-button {
+        .manage-api-button, .refresh-models-button {
             background: var(--light-gray);
             border: 1px solid var(--border);
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
-            margin-top: 15px;
             cursor: pointer;
             font-weight: 500;
             transition: var(--transition);
+            flex-grow: 1;
+            text-align: center;
         }
 
         .manage-api-button:hover, .refresh-models-button:hover {
@@ -748,18 +760,6 @@
             display: flex;
             gap: 10px;
             margin-top: 15px;
-        }
-
-        .refresh-models-button {
-            background: var(--light-gray);
-            border: 1px solid var(--border);
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: var(--transition);
-            flex-grow: 1;
         }
 
         .refresh-models-button i {
