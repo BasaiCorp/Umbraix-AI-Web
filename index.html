@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
     <div id="splash-screen">
@@ -253,10 +254,23 @@
         function formatAIResponse(text) {
             // First, escape all HTML characters to prevent injection
             let escapedText = escapeHtml(text);
-            
-            // Handle code blocks first (triple backticks)
-            escapedText = escapedText.replace(/``````/g, function(match, code) {
-                return '<pre><code>' + code.trim() + '</code></pre>';
+
+            // Updated regex to handle code blocks with language identifiers
+            escapedText = escapedText.replace(/```(\w+)?\n([\s\S]*?)```/g, function(match, lang, code) {
+                const language = lang || 'plaintext';
+                const codeId = `code-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                return `
+                    <div class="code-block-container">
+                        <div class="code-block-header">
+                            <span class="language-name">${language}</span>
+                            <button class="copy-code-button" onclick="copyCode(this, '${codeId}')" title="Copy code">
+                                <i class="far fa-clipboard"></i>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                        <pre><code id="${codeId}" class="language-${language}">${code.trim()}</code></pre>
+                    </div>
+                `;
             });
             
             // Handle inline code (single backticks) - but not if it's inside a code block
@@ -280,6 +294,31 @@
             escapedText = escapedText.replace(/<p>\s*<\/p>/g, '');
             
             return escapedText;
+        }
+
+        function copyCode(button, codeId) {
+            if (!navigator.clipboard) {
+                console.error('Clipboard API not available');
+                button.innerHTML = '<span>Not supported</span>';
+                button.disabled = true;
+                return;
+            }
+            const codeElement = document.getElementById(codeId);
+            if (codeElement) {
+                navigator.clipboard.writeText(codeElement.innerText).then(() => {
+                    button.innerHTML = '<i class="fas fa-check"></i> <span>Copied</span>';
+                    button.classList.add('copied');
+                    button.disabled = true;
+                    setTimeout(() => {
+                        button.innerHTML = '<i class="far fa-clipboard"></i> <span>Copy</span>';
+                        button.classList.remove('copied');
+                        button.disabled = false;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy code: ', err);
+                    button.innerHTML = '<span>Failed!</span>';
+                });
+            }
         }
 
         // Message Management
@@ -312,6 +351,10 @@
                     // Use the fixed formatting function
                     const formattedText = formatAIResponse(text);
                     messageDiv.innerHTML = formattedText;
+                    // Apply highlighting to the new code blocks
+                    messageDiv.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
                 }
                 
                 // Add mode indicator if not normal and not error
