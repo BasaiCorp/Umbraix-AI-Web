@@ -148,6 +148,10 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+            <div class="search-bar-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="modelSearchInput" placeholder="Search models...">
+            </div>
             <div class="model-options">
                 <div class="model-option" data-model="gemini-2.5-pro">
                     <i class="fas fa-brain"></i>
@@ -233,6 +237,7 @@
         const refreshModelsButton = document.getElementById('refreshModelsButton');
 
         let allModels = [];
+        const modelSearchInput = document.getElementById('modelSearchInput');
 
         // Mode system prompts
         const modePrompts = {
@@ -549,8 +554,19 @@
                 }
             }
 
-            // Create model elements
-            allModels.forEach(model => {
+            displayModels(allModels);
+
+            // Set default or saved model
+            currentModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+            updateSelection('model', currentModel);
+            updateChatHeader();
+        }
+
+        function displayModels(modelsToDisplay) {
+            const modelOptionsContainer = modelPopupMenu.querySelector('.model-options');
+            modelOptionsContainer.innerHTML = '';
+
+            modelsToDisplay.forEach(model => {
                 const option = document.createElement('div');
                 option.className = 'model-option';
                 option.setAttribute('data-model', model.id);
@@ -565,17 +581,12 @@
 
                 option.addEventListener('click', function() {
                     currentModel = this.getAttribute('data-model');
-                    localStorage.setItem('gemini_model', currentModel); // Consider renaming this local storage item
+                    localStorage.setItem('gemini_model', currentModel);
                     updateSelection('model', currentModel);
                     updateChatHeader();
                     closeModelPopupMenu();
                 });
             });
-
-            // Set default or saved model
-            currentModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
-            updateSelection('model', currentModel);
-            updateChatHeader();
         }
 
         async function callApi(message) {
@@ -928,6 +939,12 @@
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
             refreshModelsButton.addEventListener('click', populateModels);
+
+            modelSearchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredModels = allModels.filter(model => model.name.toLowerCase().includes(searchTerm));
+                displayModels(filteredModels);
+            });
 
             // Close popups when clicking outside
             document.addEventListener('click', function(e) {
