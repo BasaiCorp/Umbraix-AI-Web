@@ -104,6 +104,7 @@
             flex: 1;
             padding: 25px;
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -186,34 +187,34 @@
         /* New Code Block Styling */
         .code-block-container {
             border-radius: 12px;
-            overflow: hidden;
+            overflow-x: auto;
             margin: 1em 0;
-            background-color: #1e1e1e;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid #333;
+            background-color: #f7f7f7;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
         }
 
         .code-block-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #333333;
+            background: #e9ecef;
             padding: 10px 15px;
-            border-bottom: 1px solid #444;
+            border-bottom: 1px solid #d6d6d6;
         }
 
         .language-name {
             font-family: 'Rubik', sans-serif;
             font-size: 0.9rem;
-            color: #a0a0a0;
+            color: #555;
             text-transform: capitalize;
             font-weight: 500;
         }
 
         .copy-code-button {
-            background: #444;
-            color: #e0e0e0;
-            border: 1px solid #555;
+            background: #d6d6d6;
+            color: #333;
+            border: 1px solid #c0c0c0;
             padding: 8px 12px;
             border-radius: 8px;
             cursor: pointer;
@@ -225,8 +226,8 @@
         }
 
         .copy-code-button:hover {
-            background: #555;
-            border-color: #666;
+            background: #c0c0c0;
+            border-color: #a0a0a0;
         }
 
         .copy-code-button:active {
@@ -247,10 +248,11 @@
             margin: 0 !important;
             border-radius: 0 0 8px 8px !important;
             border: none !important;
+            padding: 1.5em;
         }
 
         .ai-message pre code.hljs {
-            padding: 1.5em !important;
+            padding: 0 !important;
             font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
             font-size: 0.95rem !important;
             line-height: 1.6 !important;
@@ -263,16 +265,16 @@
         }
 
         .ai-message pre code.hljs::-webkit-scrollbar-track {
-            background: #2d2d2d;
+            background: #f1f1f1;
         }
 
         .ai-message pre code.hljs::-webkit-scrollbar-thumb {
-            background: #555;
+            background: #c1c1c1;
             border-radius: 4px;
         }
 
         .ai-message pre code.hljs::-webkit-scrollbar-thumb:hover {
-            background: #777;
+            background: #a1a1a1;
         }
 
         .error-message {
