@@ -152,6 +152,34 @@
             margin-bottom: 0;
         }
 
+        /* Markdown Elements Styling */
+        .ai-message h1, .ai-message h2, .ai-message h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .ai-message ul, .ai-message ol {
+            padding-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        .ai-message li {
+            margin-bottom: 8px;
+        }
+
+        .ai-message blockquote {
+            background: var(--light-gray);
+            border-left: 4px solid var(--primary);
+            padding: 10px 15px;
+            margin: 15px 0;
+            color: var(--gray);
+        }
+
+        .ai-message blockquote p {
+            margin-bottom: 0;
+        }
+
 .generated-image {
     max-width: 100%;
     border-radius: 10px;
