@@ -104,6 +104,7 @@
             flex: 1;
             padding: 25px;
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -136,20 +137,55 @@
 
         .ai-message {
             align-self: flex-start;
-            background: var(--ai-bg);
+            background: linear-gradient(145deg, #ffffff, #f7f7f7);
             color: var(--dark);
             padding: 15px 20px;
             max-width: 90%;
             border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         }
 
         .ai-message p {
-            margin-bottom: 15px;
+            margin-bottom: 1em;
             line-height: 1.6;
         }
 
         .ai-message p:last-child {
             margin-bottom: 0;
+        }
+
+        /* Markdown Content Styling */
+        .ai-message ul, .ai-message ol {
+            padding-left: 2em;
+            margin: 1em 0;
+        }
+
+        .ai-message li {
+            margin-bottom: 0.5em;
+        }
+
+        .ai-message blockquote {
+            margin: 1em 0;
+            padding: 0.5em 1.5em;
+            border-left: 4px solid var(--border);
+            background: rgba(0,0,0,0.02);
+            color: var(--gray);
+        }
+
+        .ai-message h1, .ai-message h2, .ai-message h3, .ai-message h4, .ai-message h5, .ai-message h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+
+        .ai-message a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .ai-message a:hover {
+            text-decoration: underline;
         }
 
 .generated-image {
@@ -185,33 +221,34 @@
         /* New Code Block Styling */
         .code-block-container {
             border-radius: 12px;
-            overflow: hidden;
-            margin: 20px 0;
-            background-color: #2d2d2d;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+            margin: 1em 0;
+            background-color: #f7f7f7;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
         }
 
         .code-block-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(0, 0, 0, 0.2);
+            background: #e9ecef;
             padding: 10px 15px;
+            border-bottom: 1px solid #d6d6d6;
         }
 
         .language-name {
             font-family: 'Rubik', sans-serif;
             font-size: 0.9rem;
-            color: #a0a0a0;
+            color: #555;
             text-transform: capitalize;
             font-weight: 500;
         }
 
         .copy-code-button {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e0e0e0;
-            border: 1px solid transparent;
+            background: #d6d6d6;
+            color: #333;
+            border: 1px solid #c0c0c0;
             padding: 8px 12px;
             border-radius: 8px;
             cursor: pointer;
@@ -223,8 +260,8 @@
         }
 
         .copy-code-button:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
+            background: #c0c0c0;
+            border-color: #a0a0a0;
         }
 
         .copy-code-button:active {
@@ -241,75 +278,37 @@
             font-size: 1rem;
         }
 
-        .ai-message .code-block-container pre {
-            margin: 0;
-            border-radius: 0 0 8px 8px;
-            border: none;
-        }
-
-        /* Custom Highlight.js Theme */
-        .ai-message .code-block-container pre code.hljs {
-            display: block;
-            overflow-x: auto;
+        .ai-message pre {
+            margin: 0 !important;
+            border-radius: 0 0 8px 8px !important;
+            border: none !important;
             padding: 1.5em;
-            background: #2d2d2d;
-            color: #cccccc;
+        }
+
+        .ai-message pre code.hljs {
+            padding: 0 !important;
             font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
-            font-size: 0.95rem;
-            line-height: 1.6;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
         }
 
-        .hljs-keyword {
-            color: #569cd6;
+        /* Scrollbar for code blocks */
+        .ai-message pre code.hljs::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
 
-        .hljs-literal {
-            color: #569cd6;
+        .ai-message pre code.hljs::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
 
-        .hljs-string {
-            color: #ce9178;
+        .ai-message pre code.hljs::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
         }
 
-        .hljs-comment {
-            color: #6a9955;
-            font-style: italic;
-        }
-
-        .hljs-number {
-            color: #b5cea8;
-        }
-
-        .hljs-section, .hljs-title {
-            color: #dcdcaa;
-        }
-
-        .hljs-attr {
-            color: #9cdcfe;
-        }
-
-        .hljs-tag {
-            color: #569cd6;
-        }
-
-        .hljs-variable, .hljs-template-variable {
-            color: #9cdcfe;
-        }
-
-        .hljs-bullet {
-            color: #d7ba7d;
-        }
-
-        .hljs-meta {
-            color: #9b9b9b;
-        }
-
-        .hljs-emphasis {
-            font-style: italic;
-        }
-
-        .hljs-strong {
-            font-weight: bold;
+        .ai-message pre code.hljs::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
         }
 
         .error-message {
