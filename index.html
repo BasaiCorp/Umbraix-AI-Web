@@ -963,10 +963,15 @@
             // Focus input when page loads
             userInput.focus();
 
-            // API key input event
-            apiKeyInput.addEventListener('keypress', function(e) {
+            // API key input events
+            geminiApiKeyInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    saveApiKey();
+                    saveApiKey('gemini');
+                }
+            });
+            openRouterApiKeyInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveApiKey('openrouter');
                 }
             });
 
