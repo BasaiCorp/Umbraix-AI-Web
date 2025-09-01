@@ -161,41 +161,7 @@
                 </button>
             </div>
             <div class="model-options">
-                <div class="model-option" data-model="gemini-2.5-pro">
-                    <i class="fas fa-brain"></i>
-                    <div class="option-text">
-                        <h4>Gemini 2.5 Pro</h4>
-                        <p>Most powerful model</p>
-                    </div>
-                </div>
-                <div class="model-option active" data-model="gemini-2.5-flash">
-                    <i class="fas fa-bolt"></i>
-                    <div class="option-text">
-                        <h4>Gemini 2.5 Flash</h4>
-                        <p>Fast and efficient</p>
-                    </div>
-                </div>
-                <div class="model-option" data-model="gemini-2.0-flash">
-                    <i class="fas fa-rocket"></i>
-                    <div class="option-text">
-                        <h4>Gemini 2.0 Flash</h4>
-                        <p>Legacy fast model</p>
-                    </div>
-                </div>
-                <div class="model-option" data-model="gemini-2.5-flash-image-preview">
-                    <i class="fas fa-image"></i>
-                    <div class="option-text">
-                        <h4>Gemini 2.5 Flash Image</h4>
-                        <p>Conversational image generation</p>
-                    </div>
-                </div>
-                <div class="model-option" data-model="imagen-4.0-generate-001">
-                    <i class="fas fa-camera-retro"></i>
-                    <div class="option-text">
-                        <h4>Imagen 4.0</h4>
-                        <p>Dedicated image generation</p>
-                    </div>
-                </div>
+                <!-- Models will be dynamically populated here -->
             </div>
         </div>
     </div>
@@ -518,9 +484,18 @@
         }
 
         // Gemini AI Integration
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
         async function populateModels() {
             const modelOptionsContainer = modelPopupMenu.querySelector('.model-options');
-            modelOptionsContainer.innerHTML = ''; // Clear existing models
+            modelOptionsContainer.innerHTML = '<div class="loading-models"><span><i class="fas fa-spinner fa-spin"></i> Loading models...</span></div>';
 
             const staticGeminiModels = [
                 { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful model', provider: 'gemini' },
@@ -538,12 +513,16 @@
                     const mappedModels = openRouterModels.map(model => ({
                         id: model.id,
                         name: model.name,
-                        description: `Provider: ${model.context_length}`,
+                        description: `Context: ${model.context_length.toLocaleString()} tokens`,
                         provider: 'openrouter'
                     }));
                     allModels = allModels.concat(mappedModels);
                 } catch (error) {
                     console.error("Failed to fetch OpenRouter models:", error);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'model-option-error';
+                    errorDiv.textContent = 'Failed to load OpenRouter models. Check your API key.';
+                    modelOptionsContainer.appendChild(errorDiv);
                 }
             }
 
@@ -557,14 +536,28 @@
 
         function displayModels(modelsToDisplay) {
             const modelOptionsContainer = modelPopupMenu.querySelector('.model-options');
-            modelOptionsContainer.innerHTML = '';
+            modelOptionsContainer.innerHTML = ''; // Clear loading/previous models
+
+            if (modelsToDisplay.length === 0) {
+                modelOptionsContainer.innerHTML = '<div class="model-option-error">No models available. Please check your API keys.</div>';
+                return;
+            }
 
             modelsToDisplay.forEach(model => {
                 const option = document.createElement('div');
                 option.className = 'model-option';
                 option.setAttribute('data-model', model.id);
+
+                // Choose icon based on provider
+                let iconClass = 'fa-robot'; // Default
+                if (model.provider === 'gemini') {
+                    iconClass = 'fa-gem'; // Using Font Awesome's gem icon
+                } else if (model.provider === 'openrouter') {
+                    iconClass = 'fa-route'; // Using Font Awesome's route icon
+                }
+
                 option.innerHTML = `
-                    <i class="fas fa-robot"></i>
+                    <i class="fas ${iconClass}"></i>
                     <div class="option-text">
                         <h4>${escapeHtml(model.name)}</h4>
                         <p>${escapeHtml(model.description)}</p>
@@ -573,11 +566,18 @@
                 modelOptionsContainer.appendChild(option);
 
                 option.addEventListener('click', function() {
-                    currentModel = this.getAttribute('data-model');
-                    localStorage.setItem('gemini_model', currentModel);
-                    updateSelection('model', currentModel);
-                    updateChatHeader();
-                    closeModelPopupMenu();
+                    const selectedModelId = this.getAttribute('data-model');
+                    const selectedModelData = allModels.find(m => m.id === selectedModelId);
+
+                    if (selectedModelData) {
+                        currentModel = selectedModelData.id;
+                        localStorage.setItem('gemini_model', currentModel);
+                        updateSelection('model', currentModel);
+                        updateChatHeader();
+                        closeModelPopupMenu();
+                    } else {
+                        console.error("Could not find the selected model in the allModels array.");
+                    }
                 });
             });
         }
