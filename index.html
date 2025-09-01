@@ -27,6 +27,7 @@
             <div class="api-tabs">
                 <button class="api-tab-button active" data-tab="gemini">Gemini</button>
                 <button class="api-tab-button" data-tab="openrouter">OpenRouter</button>
+                <button class="api-tab-button" data-tab="serpapi">SerpApi</button>
             </div>
             <div id="gemini-settings" class="api-tab-content active">
                 <h4>Google Gemini API</h4>
@@ -53,6 +54,19 @@
                     <button id="removeOpenRouterApiKey" class="remove-button">Remove Key</button>
                 </div>
                 <p class="api-link">Get a key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a></p>
+            </div>
+            <div id="serpapi-settings" class="api-tab-content">
+                <h4>SerpApi</h4>
+                <p>For Web Search mode.</p>
+                <div class="api-key-input-container">
+                    <input type="password" id="serpApiKeyInput" placeholder="Enter your SerpApi API key">
+                    <button class="toggle-api-visibility" data-input="serpApiKeyInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-setup-actions">
+                    <button id="saveSerpApiKey">Save Key</button>
+                    <button id="removeSerpApiKey" class="remove-button">Remove Key</button>
+                </div>
+                <p class="api-link">Get a free key from <a href="https://serpapi.com/users/sign_up" target="_blank">SerpApi</a></p>
             </div>
             <p class="api-storage-notice"><small>Your API keys are stored locally and never shared.</small></p>
         </div>
@@ -170,10 +184,12 @@
     </div>
 
     <script src="openrouter.js"></script>
+    <script src="serpapi.js"></script>
     <script>
         // API Key Configuration
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
         let OPENROUTER_API_KEY = localStorage.getItem('openrouter_api_key') || '';
+        let SERPAPI_API_KEY = localStorage.getItem('serpapi_api_key') || '';
         
         // Chat state
         let conversationHistory = [];
@@ -205,6 +221,9 @@
         const removeGeminiApiKey = document.getElementById('removeGeminiApiKey');
         const saveOpenRouterApiKey = document.getElementById('saveOpenRouterApiKey');
         const removeOpenRouterApiKey = document.getElementById('removeOpenRouterApiKey');
+        const serpApiKeyInput = document.getElementById('serpApiKeyInput');
+        const saveSerpApiKey = document.getElementById('saveSerpApiKey');
+        const removeSerpApiKey = document.getElementById('removeSerpApiKey');
         const toggleApiVisibilityButtons = document.querySelectorAll('.toggle-api-visibility');
         const refreshModelsButton = document.getElementById('refreshModelsButton');
 
@@ -215,7 +234,7 @@
         const modePrompts = {
             normal: "You are Umbraix AI, a helpful and friendly assistant. Provide clear, concise, and accurate responses. Be conversational and engaging.",
             
-            webSearch: "You are Umbraix AI in Web Search mode. Act as if you have access to current web information and provide comprehensive, well-researched responses with specific details and examples. Be thorough and informative.",
+            webSearch: "You are Umbraix AI in Web Search mode. You have been provided with a series of web search results. Please use these results to answer the user's query. Provide a comprehensive, well-researched response with specific details and examples from the provided text. Cite the sources you use.",
             
             think: "You are Umbraix AI in Think Mode. Provide deep, analytical responses. Break down complex topics, show your reasoning process, consider multiple perspectives, and provide thoughtful insights. Structure your responses with clear logic and evidence.",
             
@@ -328,6 +347,7 @@
         function showApiSetup() {
             geminiApiKeyInput.value = GEMINI_API_KEY;
             openRouterApiKeyInput.value = OPENROUTER_API_KEY;
+            serpApiKeyInput.value = SERPAPI_API_KEY;
             apiSetup.style.display = 'flex';
         }
 
@@ -342,11 +362,16 @@
                 key = input.value.trim();
                 GEMINI_API_KEY = key;
                 localStorage.setItem('gemini_api_key', key);
-            } else {
+            } else if (keyType === 'openrouter') {
                 input = openRouterApiKeyInput;
                 key = input.value.trim();
                 OPENROUTER_API_KEY = key;
                 localStorage.setItem('openrouter_api_key', key);
+            } else if (keyType === 'serpapi') {
+                input = serpApiKeyInput;
+                key = input.value.trim();
+                SERPAPI_API_KEY = key;
+                localStorage.setItem('serpapi_api_key', key);
             }
             alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key saved!`);
             hideApiSetup();
@@ -362,10 +387,14 @@
                     localStorage.removeItem('gemini_api_key');
                     GEMINI_API_KEY = '';
                     geminiApiKeyInput.value = '';
-                } else {
+                } else if (keyType === 'openrouter') {
                     localStorage.removeItem('openrouter_api_key');
                     OPENROUTER_API_KEY = '';
                     openRouterApiKeyInput.value = '';
+                } else if (keyType === 'serpapi') {
+                    localStorage.removeItem('serpapi_api_key');
+                    SERPAPI_API_KEY = '';
+                    serpApiKeyInput.value = '';
                 }
                 alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key removed.`);
             }
@@ -809,6 +838,7 @@
                 if (abortController.signal.aborted) return;
                 if (!responseStarted) {
                     hideTypingIndicator();
+                    hideThinkingIndicator();
                     responseStarted = true;
                 }
                 currentResponse += text;
@@ -832,7 +862,37 @@
             showTypingIndicator();
 
             try {
-                if (currentMode === 'imagen') {
+                if (currentMode === 'webSearch') {
+                    if (!SERPAPI_API_KEY) {
+                        throw new Error("SerpApi API key not set. Please add it in the API Key Management.");
+                    }
+                    hideTypingIndicator();
+                    showThinkingIndicator();
+                    const searchResults = await callSerpApi(message, SERPAPI_API_KEY);
+
+                    let searchContext = "Web search results:\n\n";
+                    if (searchResults.organic_results) {
+                        searchResults.organic_results.forEach(result => {
+                            searchContext += `Title: ${result.title}\n`;
+                            searchContext += `Link: ${result.link}\n`;
+                            if(result.snippet)
+                                searchContext += `Snippet: ${result.snippet}\n\n`;
+                        });
+                    }
+                    if (searchResults.answer_box) {
+                        searchContext += `Answer Box: ${searchResults.answer_box.snippet || searchResults.answer_box.answer}\n\n`;
+                    }
+                    if (searchResults.related_questions) {
+                        searchResults.related_questions.forEach(q => {
+                            searchContext += `Related Question: ${q.question}\n`;
+                            searchContext += `Answer: ${q.snippet}\n\n`;
+                        });
+                    }
+
+                    const messageWithContext = `${searchContext}\n\nUser query: ${message}`;
+                    await callApi(messageWithContext, onChunk, onComplete);
+
+                } else if (currentMode === 'imagen') {
                     hideTypingIndicator();
                     let response;
                     if (currentModel === 'gemini-2.5-flash-image-preview') {
@@ -850,6 +910,7 @@
             } catch (error) {
                  if (error.name !== 'AbortError') {
                     hideTypingIndicator();
+                    hideThinkingIndicator();
                     let errorMessage = 'Sorry, I encountered an error. ' + (error.message || 'Please try again.');
                     addMessage(errorMessage, false, true);
                 }
@@ -965,6 +1026,8 @@
             removeGeminiApiKey.addEventListener('click', () => removeApiKey('gemini'));
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
+            saveSerpApiKey.addEventListener('click', () => saveApiKey('serpapi'));
+            removeSerpApiKey.addEventListener('click', () => removeApiKey('serpapi'));
             refreshModelsButton.addEventListener('click', populateModels);
             stopButton.addEventListener('click', stopGeneration);
 
