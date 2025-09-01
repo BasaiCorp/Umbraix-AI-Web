@@ -276,15 +276,25 @@
         }
 
         /* Custom Highlight.js Theme */
+        .ai-message .code-block-container pre code.hljs,
+        .ai-message code {
+            color: #cccccc;
+        }
+
         .ai-message .code-block-container pre code.hljs {
             display: block;
             overflow-x: auto;
             padding: 1.5em;
             background: #2d2d2d;
-            color: #cccccc;
             font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
             font-size: 0.95rem;
             line-height: 1.6;
+        }
+
+        .ai-message code {
+            background: #2d2d2d;
+            padding: 2px 4px;
+            border-radius: 4px;
         }
 
         .hljs-keyword {
