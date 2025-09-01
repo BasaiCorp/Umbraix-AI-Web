@@ -140,6 +140,9 @@
                 <button class="send-button" id="sendButton">
                     <i class="fas fa-paper-plane"></i>
                 </button>
+                <button class="stop-button" id="stopButton" style="display: none;">
+                    <i class="fas fa-stop"></i>
+                </button>
             </div>
         </div>
 
@@ -182,6 +185,7 @@
         const chatMessages = document.getElementById('chatMessages');
         const userInput = document.getElementById('userInput');
         const sendButton = document.getElementById('sendButton');
+        const stopButton = document.getElementById('stopButton');
         const modeButton = document.getElementById('modeButton');
         const popupMenu = document.getElementById('popupMenu');
         const closePopup = document.getElementById('closePopup');
@@ -582,7 +586,7 @@
             });
         }
 
-        async function callApi(message) {
+        async function callApi(message, onChunk, onComplete) {
             const modelData = allModels.find(m => m.id === currentModel);
             if (!modelData) {
                 throw new Error("Selected model not found!");
@@ -594,17 +598,17 @@
                     role: item.role === 'model' ? 'assistant' : 'user',
                     content: item.parts[0].text
                 }));
-                return await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, history);
+                await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, history, onChunk, onComplete, abortController.signal);
             } else {
                 // Default to Gemini
                 if (!GEMINI_API_KEY) throw new Error("Gemini API key not set.");
-                return await callGeminiAPI(message);
+                await callGeminiAPI(message, onChunk, onComplete);
             }
         }
 
-        async function callGeminiAPI(message) {
+        async function callGeminiAPI(message, onChunk, onComplete) {
             const systemPrompt = modePrompts[currentMode];
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`;
 
             let conversationContext = [{ role: "user", parts: [{ text: systemPrompt }] }];
             conversationContext = conversationContext.concat(conversationHistory.slice(-10));
@@ -623,18 +627,47 @@
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify(requestBody),
+                signal: abortController.signal
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
             }
-            const data = await response.json();
-            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                return data.candidates[0].content.parts[0].text;
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = "";
+
+            while (true) {
+                if (abortController.signal.aborted) {
+                    reader.cancel();
+                    break;
+                }
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const jsonStr = line.substring(6);
+                        try {
+                            const parsed = JSON.parse(jsonStr);
+                            if (parsed.candidates && parsed.candidates[0] && parsed.candidates[0].content) {
+                                const text = parsed.candidates[0].content.parts[0].text;
+                                fullResponse += text;
+                                onChunk(text);
+                            }
+                        } catch (e) {
+                            // Ignore parsing errors, likely incomplete JSON
+                        }
+                    }
+                }
             }
-            throw new Error('Invalid response format from Gemini API');
+            onComplete(fullResponse);
         }
 
         async function callImagen4API(message) {
@@ -736,90 +769,91 @@
         }
 
         // Message Sending
+        let abortController = new AbortController();
+
+        function stopGeneration() {
+            abortController.abort();
+            isGenerating = false;
+            sendButton.style.display = 'block';
+            stopButton.style.display = 'none';
+            userInput.disabled = false;
+            userInput.focus();
+            hideTypingIndicator();
+        }
+
         async function sendMessage() {
             const message = userInput.value.trim();
             if (!message || isGenerating) return;
 
-            // Disable input and show loading state
             isGenerating = true;
-            sendButton.disabled = true;
+            sendButton.style.display = 'none';
+            stopButton.style.display = 'block';
             userInput.disabled = true;
 
-            // Add user message
+            abortController = new AbortController();
+
             addMessage(message, true);
             userInput.value = '';
             sendButton.classList.remove('active');
 
-            // Add to conversation history
-            conversationHistory.push({
-                role: "user",
-                parts: [{ text: message }]
-            });
+            conversationHistory.push({ role: "user", parts: [{ text: message }] });
 
-            // Show typing indicator
-            if (currentModel === 'gemini-2.5-pro' && currentMode === 'think') {
-                showThinkingIndicator();
-            } else {
-                showTypingIndicator();
-            }
+            const aiMessageElement = document.createElement('div');
+            aiMessageElement.classList.add('message', 'ai-message');
+            chatMessages.appendChild(aiMessageElement);
+
+            let currentResponse = "";
+            let responseStarted = false;
+
+            const onChunk = (text) => {
+                if (abortController.signal.aborted) return;
+                if (!responseStarted) {
+                    hideTypingIndicator();
+                    responseStarted = true;
+                }
+                currentResponse += text;
+                aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                scrollToBottom();
+            };
+
+            const onComplete = (fullResponse) => {
+                if (abortController.signal.aborted) {
+                    conversationHistory.push({ role: "model", parts: [{ text: currentResponse + "..." }] });
+                } else {
+                    conversationHistory.push({ role: "model", parts: [{ text: fullResponse }] });
+                }
+                isGenerating = false;
+                sendButton.style.display = 'block';
+                stopButton.style.display = 'none';
+                userInput.disabled = false;
+                userInput.focus();
+            };
+
+            showTypingIndicator();
 
             try {
-                let response;
                 if (currentMode === 'imagen') {
+                    hideTypingIndicator();
+                    let response;
                     if (currentModel === 'gemini-2.5-flash-image-preview') {
                         response = await callGeminiFlashImageAPI(message);
                     } else if (currentModel === 'imagen-4.0-generate-001') {
                         response = await callImagen4API(message);
                     } else {
-                        // Default to flash image API if no specific image model is selected
                         response = await callGeminiFlashImageAPI(message);
                     }
-                } else {
-                    response = await callApi(message);
-                }
-                
-                // Hide typing indicator
-                if (currentModel === 'gemini-2.5-pro' && currentMode === 'think') {
-                    hideThinkingIndicator();
-                } else {
-                    hideTypingIndicator();
-                }
-                
-                // Add AI response
-                if (currentMode === 'imagen') {
                     addMessage(response, false, false, message);
+                    onComplete(response);
                 } else {
-                    addMessage(response);
+                    await callApi(message, onChunk, onComplete);
                 }
-
-                // Add to conversation history
-                conversationHistory.push({
-                    role: "model",
-                    parts: [{ text: response }]
-                });
-
             } catch (error) {
-                hideTypingIndicator();
-                
-                let errorMessage = 'Sorry, I encountered an error while processing your request. ';
-                
-                if (error.message.includes('API key')) {
-                    errorMessage += 'Please check your API key and try again.';
-                } else if (error.message.includes('quota')) {
-                    errorMessage += 'API quota exceeded. Please try again later.';
-                } else if (error.message.includes('network') || error.message.includes('fetch')) {
-                    errorMessage += 'Network error. Please check your connection and try again.';
-                } else {
-                    errorMessage += 'Please try again.';
+                 if (error.name !== 'AbortError') {
+                    hideTypingIndicator();
+                    let errorMessage = 'Sorry, I encountered an error. ' + (error.message || 'Please try again.');
+                    addMessage(errorMessage, false, true);
                 }
-
-                addMessage(errorMessage, false, true);
-            } finally {
-                // Re-enable input
-                isGenerating = false;
-                sendButton.disabled = false;
-                userInput.disabled = false;
-                userInput.focus();
+                onComplete(""); // End the generation process
             }
         }
 
@@ -932,6 +966,7 @@
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
             refreshModelsButton.addEventListener('click', populateModels);
+            stopButton.addEventListener('click', stopGeneration);
 
             modelSearchInput.addEventListener('input', (e) => {
                 const searchTerm = e.target.value.toLowerCase();
