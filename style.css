@@ -432,6 +432,25 @@
             cursor: not-allowed;
         }
 
+        .stop-button {
+            background: var(--error-color);
+            color: white;
+            border: none;
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .stop-button:hover {
+            background: #a00;
+        }
+
         /* Popup Menu */
         .popup-menu {
             position: absolute;

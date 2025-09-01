@@ -40,12 +40,13 @@ async function fetchOpenRouterModels(apiKey) {
  * @param {Array<object>} messages - The conversation history.
  * @returns {Promise<string>} - A promise that resolves to the AI's response text.
  */
-async function callOpenRouterAPI(apiKey, model, messages) {
+async function callOpenRouterAPI(apiKey, model, messages, onChunk, onComplete, signal) {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
     const body = JSON.stringify({
         model: model,
         messages: messages,
+        stream: true
     });
 
     try {
@@ -58,6 +59,7 @@ async function callOpenRouterAPI(apiKey, model, messages) {
                 'X-Title': 'Umbraix AI', // Replace with your actual app name
             },
             body: body,
+            signal: signal
         });
 
         if (!response.ok) {
@@ -65,13 +67,41 @@ async function callOpenRouterAPI(apiKey, model, messages) {
             throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = "";
 
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-            return data.choices[0].message.content;
-        } else {
-            throw new Error('Invalid response format from OpenRouter API');
+        while (true) {
+            if (signal.aborted) {
+                reader.cancel();
+                break;
+            }
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.substring(6);
+                    if (jsonStr.trim() === '[DONE]') {
+                        continue;
+                    }
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                            const text = parsed.choices[0].delta.content;
+                            fullResponse += text;
+                            onChunk(text);
+                        }
+                    } catch (e) {
+                        // Ignore parsing errors
+                    }
+                }
+            }
         }
+        onComplete(fullResponse);
     } catch (error) {
         console.error('OpenRouter API Error:', error);
         throw error;
