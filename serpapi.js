@@ -1,5 +1,5 @@
 async function callSerpApi(query, apiKey) {
-    const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${apiKey}`;
+    const url = `https://cors-anywhere.herokuapp.com/https://serpapi.com/search?engine=google&q=${encodeURIComponent(query)}&api_key=${apiKey}&output=json&no_cache=true`;
 
     try {
         const response = await fetch(url);
