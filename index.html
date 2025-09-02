@@ -27,6 +27,7 @@
             <div class="api-tabs">
                 <button class="api-tab-button active" data-tab="gemini">Gemini</button>
                 <button class="api-tab-button" data-tab="openrouter">OpenRouter</button>
+                <button class="api-tab-button" data-tab="serpapi">SerpAPI</button>
             </div>
             <div id="gemini-settings" class="api-tab-content active">
                 <h4>Google Gemini API</h4>
@@ -53,6 +54,19 @@
                     <button id="removeOpenRouterApiKey" class="remove-button">Remove Key</button>
                 </div>
                 <p class="api-link">Get a key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a></p>
+            </div>
+            <div id="serpapi-settings" class="api-tab-content">
+                <h4>SerpAPI</h4>
+                <p>For real-time web search results.</p>
+                <div class="api-key-input-container">
+                    <input type="password" id="serpApiKeyInput" placeholder="Enter your SerpAPI key">
+                    <button class="toggle-api-visibility" data-input="serpApiKeyInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-setup-actions">
+                    <button id="saveSerpApiKey">Save Key</button>
+                    <button id="removeSerpApiKey" class="remove-button">Remove Key</button>
+                </div>
+                <p class="api-link">Get a key from <a href="https://serpapi.com/dashboard" target="_blank">SerpAPI Dashboard</a></p>
             </div>
             <p class="api-storage-notice"><small>Your API keys are stored locally and never shared.</small></p>
         </div>
@@ -105,6 +119,14 @@
                         <h4>Web Search</h4>
                         <p>Search and analyze information</p>
                     </div>
+                    <select id="searchEngineSelector" class="search-engine-selector">
+                        <option value="google">Google</option>
+                        <option value="bing">Bing</option>
+                        <option value="yahoo">Yahoo</option>
+                        <option value="yandex">Yandex</option>
+                        <option value="baidu">Baidu</option>
+                        <option value="duckduckgo">DuckDuckGo</option>
+                    </select>
                 </div>
                 <div class="mode-option" data-mode="think">
                     <i class="fas fa-lightbulb"></i>
@@ -170,10 +192,12 @@
     </div>
 
     <script src="openrouter.js"></script>
+    <script src="search.js"></script>
     <script>
         // API Key Configuration
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
         let OPENROUTER_API_KEY = localStorage.getItem('openrouter_api_key') || '';
+        let SERPAPI_API_KEY = localStorage.getItem('serpapi_api_key') || '';
         
         // Chat state
         let conversationHistory = [];
@@ -201,10 +225,13 @@
         const apiTabs = document.querySelectorAll('.api-tab-button');
         const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
         const openRouterApiKeyInput = document.getElementById('openRouterApiKeyInput');
+        const serpApiKeyInput = document.getElementById('serpApiKeyInput');
         const saveGeminiApiKey = document.getElementById('saveGeminiApiKey');
         const removeGeminiApiKey = document.getElementById('removeGeminiApiKey');
         const saveOpenRouterApiKey = document.getElementById('saveOpenRouterApiKey');
         const removeOpenRouterApiKey = document.getElementById('removeOpenRouterApiKey');
+        const saveSerpApiKey = document.getElementById('saveSerpApiKey');
+        const removeSerpApiKey = document.getElementById('removeSerpApiKey');
         const toggleApiVisibilityButtons = document.querySelectorAll('.toggle-api-visibility');
         const refreshModelsButton = document.getElementById('refreshModelsButton');
 
@@ -328,6 +355,7 @@
         function showApiSetup() {
             geminiApiKeyInput.value = GEMINI_API_KEY;
             openRouterApiKeyInput.value = OPENROUTER_API_KEY;
+            serpApiKeyInput.value = SERPAPI_API_KEY;
             apiSetup.style.display = 'flex';
         }
 
@@ -342,11 +370,16 @@
                 key = input.value.trim();
                 GEMINI_API_KEY = key;
                 localStorage.setItem('gemini_api_key', key);
-            } else {
+            } else if (keyType === 'openrouter') {
                 input = openRouterApiKeyInput;
                 key = input.value.trim();
                 OPENROUTER_API_KEY = key;
                 localStorage.setItem('openrouter_api_key', key);
+            } else if (keyType === 'serpapi') {
+                input = serpApiKeyInput;
+                key = input.value.trim();
+                SERPAPI_API_KEY = key;
+                localStorage.setItem('serpapi_api_key', key);
             }
             alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key saved!`);
             hideApiSetup();
@@ -362,10 +395,14 @@
                     localStorage.removeItem('gemini_api_key');
                     GEMINI_API_KEY = '';
                     geminiApiKeyInput.value = '';
-                } else {
+                } else if (keyType === 'openrouter') {
                     localStorage.removeItem('openrouter_api_key');
                     OPENROUTER_API_KEY = '';
                     openRouterApiKeyInput.value = '';
+                } else if (keyType === 'serpapi') {
+                    localStorage.removeItem('serpapi_api_key');
+                    SERPAPI_API_KEY = '';
+                    serpApiKeyInput.value = '';
                 }
                 alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key removed.`);
             }
@@ -781,6 +818,43 @@
             hideTypingIndicator();
         }
 
+        function processSearchResultsForAI(results) {
+            if (!results.organic_results || results.organic_results.length === 0) {
+                return "No search results found.";
+            }
+
+            let context = "Search Results:\n";
+            results.organic_results.slice(0, 5).forEach((result, index) => {
+                context += `[Result ${index + 1}]\n`;
+                context += `Title: ${result.title}\n`;
+                context += `Snippet: ${result.snippet}\n`;
+                context += `Link: ${result.link}\n\n`;
+            });
+
+            return context;
+        }
+
+        function displaySearchResults(results) {
+            if (!results.organic_results || results.organic_results.length === 0) {
+                addMessage("No search results found.", false, true);
+                return;
+            }
+
+            let html = '<div class="search-results-container">';
+            results.organic_results.slice(0, 5).forEach(result => {
+                html += `
+                    <div class="search-result">
+                        <h4 class="search-result-title">${escapeHtml(result.title)}</h4>
+                        <a href="${result.link}" target="_blank" class="search-result-link">${escapeHtml(result.link)}</a>
+                        <p class="search-result-snippet">${escapeHtml(result.snippet)}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            addMessage(html);
+        }
+
         async function sendMessage() {
             const message = userInput.value.trim();
             if (!message || isGenerating) return;
@@ -797,6 +871,36 @@
             sendButton.classList.remove('active');
 
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
+
+            if (currentMode === 'webSearch') {
+                if (!SERPAPI_API_KEY) {
+                    addMessage("SerpAPI key is not set. Please add it in the API Key Management section.", false, true);
+                    isGenerating = false;
+                    sendButton.style.display = 'block';
+                    stopButton.style.display = 'none';
+                    userInput.disabled = false;
+                    userInput.focus();
+                    return;
+                }
+                showThinkingIndicator();
+                try {
+                    const searchEngine = document.getElementById('searchEngineSelector').value;
+                    const searchResults = await callSerpApi(SERPAPI_API_KEY, message, searchEngine);
+                    displaySearchResults(searchResults);
+                    const searchContext = processSearchResultsForAI(searchResults);
+                    message = `${searchContext}\n\nBased on the above search results, please answer the following query: ${message}`;
+                } catch (error) {
+                    addMessage(`Error fetching search results: ${error.message}`, false, true);
+                    isGenerating = false;
+                    sendButton.style.display = 'block';
+                    stopButton.style.display = 'none';
+                    userInput.disabled = false;
+                    userInput.focus();
+                    return;
+                } finally {
+                    hideThinkingIndicator();
+                }
+            }
 
             const aiMessageElement = document.createElement('div');
             aiMessageElement.classList.add('message', 'ai-message');
@@ -965,6 +1069,8 @@
             removeGeminiApiKey.addEventListener('click', () => removeApiKey('gemini'));
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
+            saveSerpApiKey.addEventListener('click', () => saveApiKey('serpapi'));
+            removeSerpApiKey.addEventListener('click', () => removeApiKey('serpapi'));
             refreshModelsButton.addEventListener('click', populateModels);
             stopButton.addEventListener('click', stopGeneration);
 

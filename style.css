@@ -585,8 +585,48 @@
             border-color: var(--primary);
         }
 
+        .search-engine-selector {
+            margin-left: auto;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 0.85rem;
+            color: var(--gray);
+            outline: none;
+        }
+
         .mode-option.active, .model-option.active {
             font-weight: 500;
+        }
+
+        .search-results-container {
+            margin-top: 15px;
+            border-top: 1px solid var(--border);
+            padding-top: 15px;
+        }
+
+        .search-result {
+            margin-bottom: 15px;
+        }
+
+        .search-result-title {
+            font-weight: 500;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .search-result-link {
+            font-size: 0.9rem;
+            color: var(--primary);
+            text-decoration: none;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .search-result-snippet {
+            font-size: 0.9rem;
+            color: var(--gray);
         }
 
         .option-text h4 {
