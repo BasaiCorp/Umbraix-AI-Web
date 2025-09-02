@@ -27,6 +27,7 @@
             <div class="api-tabs">
                 <button class="api-tab-button active" data-tab="gemini">Gemini</button>
                 <button class="api-tab-button" data-tab="openrouter">OpenRouter</button>
+                <button class="api-tab-button" data-tab="brave">Brave</button>
             </div>
             <div id="gemini-settings" class="api-tab-content active">
                 <h4>Google Gemini API</h4>
@@ -53,6 +54,19 @@
                     <button id="removeOpenRouterApiKey" class="remove-button">Remove Key</button>
                 </div>
                 <p class="api-link">Get a key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a></p>
+            </div>
+            <div id="brave-settings" class="api-tab-content">
+                <h4>Brave Search API</h4>
+                <p>Real-time web search results.</p>
+                <div class="api-key-input-container">
+                    <input type="password" id="braveApiKeyInput" placeholder="Enter your Brave Search API key">
+                    <button class="toggle-api-visibility" data-input="braveApiKeyInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-setup-actions">
+                    <button id="saveBraveApiKey">Save Key</button>
+                    <button id="removeBraveApiKey" class="remove-button">Remove Key</button>
+                </div>
+                <p class="api-link">Get a key from <a href="https://api-dashboard.search.brave.com/app/keys" target="_blank">Brave Search API</a></p>
             </div>
             <p class="api-storage-notice"><small>Your API keys are stored locally and never shared.</small></p>
         </div>
@@ -170,10 +184,12 @@
     </div>
 
     <script src="openrouter.js"></script>
+    <script src="search.js"></script>
     <script>
         // API Key Configuration
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
         let OPENROUTER_API_KEY = localStorage.getItem('openrouter_api_key') || '';
+        let BRAVE_API_KEY = localStorage.getItem('brave_api_key') || '';
         
         // Chat state
         let conversationHistory = [];
@@ -201,10 +217,13 @@
         const apiTabs = document.querySelectorAll('.api-tab-button');
         const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
         const openRouterApiKeyInput = document.getElementById('openRouterApiKeyInput');
+        const braveApiKeyInput = document.getElementById('braveApiKeyInput');
         const saveGeminiApiKey = document.getElementById('saveGeminiApiKey');
         const removeGeminiApiKey = document.getElementById('removeGeminiApiKey');
         const saveOpenRouterApiKey = document.getElementById('saveOpenRouterApiKey');
         const removeOpenRouterApiKey = document.getElementById('removeOpenRouterApiKey');
+        const saveBraveApiKey = document.getElementById('saveBraveApiKey');
+        const removeBraveApiKey = document.getElementById('removeBraveApiKey');
         const toggleApiVisibilityButtons = document.querySelectorAll('.toggle-api-visibility');
         const refreshModelsButton = document.getElementById('refreshModelsButton');
 
@@ -215,7 +234,7 @@
         const modePrompts = {
             normal: "You are Umbraix AI, a helpful and friendly assistant. Provide clear, concise, and accurate responses. Be conversational and engaging.",
             
-            webSearch: "You are Umbraix AI in Web Search mode. Act as if you have access to current web information and provide comprehensive, well-researched responses with specific details and examples. Be thorough and informative.",
+            webSearch: "You are Umbraix AI in Web Search mode. You will be given a user's query and a set of search results. Your task is to synthesize the information from the search results to provide a comprehensive, well-researched response to the user's query. Cite the search results using markdown links where appropriate.",
             
             think: "You are Umbraix AI in Think Mode. Provide deep, analytical responses. Break down complex topics, show your reasoning process, consider multiple perspectives, and provide thoughtful insights. Structure your responses with clear logic and evidence.",
             
@@ -310,7 +329,7 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
+            if (!GEMINI_API_KEY && !OPENROUTER_API_KEY && !BRAVE_API_KEY) {
                 showApiSetup();
             } else {
                 hideApiSetup();
@@ -328,6 +347,7 @@
         function showApiSetup() {
             geminiApiKeyInput.value = GEMINI_API_KEY;
             openRouterApiKeyInput.value = OPENROUTER_API_KEY;
+            braveApiKeyInput.value = BRAVE_API_KEY;
             apiSetup.style.display = 'flex';
         }
 
@@ -342,11 +362,16 @@
                 key = input.value.trim();
                 GEMINI_API_KEY = key;
                 localStorage.setItem('gemini_api_key', key);
-            } else {
+            } else if (keyType === 'openrouter') {
                 input = openRouterApiKeyInput;
                 key = input.value.trim();
                 OPENROUTER_API_KEY = key;
                 localStorage.setItem('openrouter_api_key', key);
+            } else {
+                input = braveApiKeyInput;
+                key = input.value.trim();
+                BRAVE_API_KEY = key;
+                localStorage.setItem('brave_api_key', key);
             }
             alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key saved!`);
             hideApiSetup();
@@ -362,13 +387,46 @@
                     localStorage.removeItem('gemini_api_key');
                     GEMINI_API_KEY = '';
                     geminiApiKeyInput.value = '';
-                } else {
+                } else if (keyType === 'openrouter') {
                     localStorage.removeItem('openrouter_api_key');
                     OPENROUTER_API_KEY = '';
                     openRouterApiKeyInput.value = '';
+                } else {
+                    localStorage.removeItem('brave_api_key');
+                    BRAVE_API_KEY = '';
+                    braveApiKeyInput.value = '';
                 }
                 alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key removed.`);
             }
+        }
+
+        function displaySearchResults(results) {
+            const searchResultsDiv = document.createElement('div');
+            searchResultsDiv.classList.add('search-results');
+            let html = '<h4>Search Results</h4><ul>';
+            if (results.web && results.web.results) {
+                results.web.results.slice(0, 5).forEach(result => {
+                    html += `<li><a href="${result.url}" target="_blank">${result.title}</a><p>${result.description}</p></li>`;
+                });
+            }
+            html += '</ul>';
+            searchResultsDiv.innerHTML = html;
+            chatMessages.appendChild(searchResultsDiv);
+            scrollToBottom();
+        }
+
+        function augmentMessageWithSearchResults(message, results) {
+            let augmentedMessage = `Original query: "${message}"\n\n`;
+            if (results.web && results.web.results) {
+                augmentedMessage += "Here are some search results to help you answer:\n\n";
+                results.web.results.slice(0, 5).forEach((result, index) => {
+                    augmentedMessage += `Result ${index + 1}:\n`;
+                    augmentedMessage += `Title: ${result.title}\n`;
+                    augmentedMessage += `URL: ${result.url}\n`;
+                    augmentedMessage += `Snippet: ${result.description}\n\n`;
+                });
+            }
+            return augmentedMessage;
         }
 
         function formatAIResponse(text) {
@@ -832,7 +890,21 @@
             showTypingIndicator();
 
             try {
-                if (currentMode === 'imagen') {
+                if (currentMode === 'webSearch' && BRAVE_API_KEY) {
+                    hideTypingIndicator();
+                    showThinkingIndicator();
+                    try {
+                        const searchResults = await callBraveSearchAPI(message, BRAVE_API_KEY);
+                        hideThinkingIndicator();
+                        displaySearchResults(searchResults);
+                        const augmentedMessage = augmentMessageWithSearchResults(message, searchResults);
+                        await callApi(augmentedMessage, onChunk, onComplete);
+                    } catch (error) {
+                        hideThinkingIndicator();
+                        addMessage(`Search failed: ${error.message}`, false, true);
+                        onComplete("");
+                    }
+                } else if (currentMode === 'imagen') {
                     hideTypingIndicator();
                     let response;
                     if (currentModel === 'gemini-2.5-flash-image-preview') {
@@ -965,6 +1037,8 @@
             removeGeminiApiKey.addEventListener('click', () => removeApiKey('gemini'));
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
+            saveBraveApiKey.addEventListener('click', () => saveApiKey('brave'));
+            removeBraveApiKey.addEventListener('click', () => removeApiKey('brave'));
             refreshModelsButton.addEventListener('click', populateModels);
             stopButton.addEventListener('click', stopGeneration);
 
