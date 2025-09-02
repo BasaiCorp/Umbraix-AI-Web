@@ -473,6 +473,7 @@
         }
 
         function addSearchResults(results) {
+            const resultsId = `search-results-${Date.now()}`;
             const resultsDiv = document.createElement('div');
             resultsDiv.classList.add('message', 'ai-message', 'search-results-container');
 
@@ -491,11 +492,28 @@
                 resultsDiv.innerHTML = `
                     <div class="search-results-header">
                         <h4>Web Search Results</h4>
+                        <button class="collapse-button" data-target="${resultsId}">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
                     </div>
-                    <div class="search-results-list">
+                    <div class="search-results-list" id="${resultsId}">
                         ${resultsList}
                     </div>
                 `;
+
+                const collapseButton = resultsDiv.querySelector('.collapse-button');
+                const searchResultsList = resultsDiv.querySelector('.search-results-list');
+
+                // Start collapsed
+                searchResultsList.style.display = 'none';
+
+                collapseButton.addEventListener('click', () => {
+                    const isCollapsed = searchResultsList.style.display === 'none';
+                    searchResultsList.style.display = isCollapsed ? 'grid' : 'none';
+                    const icon = collapseButton.querySelector('i');
+                    icon.classList.toggle('fa-chevron-down', !isCollapsed);
+                    icon.classList.toggle('fa-chevron-up', isCollapsed);
+                });
             }
             chatMessages.appendChild(resultsDiv);
             scrollToBottom();

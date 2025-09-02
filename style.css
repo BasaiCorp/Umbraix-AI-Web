@@ -1098,16 +1098,43 @@ input:checked + .slider:before {
     border: 1px solid var(--border);
 }
 
+.search-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
 .search-results-header h4 {
     font-weight: 600;
-    margin-bottom: 15px;
     font-size: 1.1rem;
     color: var(--dark);
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+}
+
+.collapse-button {
+    background: transparent;
+    border: none;
+    color: var(--gray);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.collapse-button:hover {
+    background: var(--light-gray);
+    color: var(--dark);
 }
 
 .search-results-list {
+    margin-top: 15px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
