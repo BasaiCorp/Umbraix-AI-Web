@@ -107,3 +107,53 @@ async function callOpenRouterAPI(apiKey, model, messages, onChunk, onComplete, s
         throw error;
     }
 }
+
+/**
+ * Calls the Google Custom Search API.
+ * @param {string} query - The search query.
+ * @returns {Promise<Array<object>>} - A promise that resolves to an array of search result items.
+ */
+async function callGoogleSearchApi(query) {
+    // Note: GOOGLE_API_KEY and GOOGLE_CSE_ID are defined in the main script in index.html
+    if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID) {
+        throw new Error("Google API Key or CSE ID is not set. Please configure them in the settings.");
+    }
+
+    // Quota management for default key
+    if (GOOGLE_API_KEY === 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM') {
+        const today = new Date().toISOString().split('T')[0];
+        let quota = JSON.parse(localStorage.getItem('google_search_quota') || '{}');
+
+        if (quota.date !== today) {
+            quota = { date: today, count: 0 };
+        }
+
+        if (quota.count >= 100) {
+            throw new Error("Default search quota exceeded for today. Please add your own API key in the settings to continue using web search.");
+        }
+
+        quota.count++;
+        localStorage.setItem('google_search_quota', JSON.stringify(quota));
+    }
+
+    const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CSE_ID}&q=${encodeURIComponent(query)}&num=10`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = data.error?.message || `HTTP error! status: ${response.status}`;
+            console.error('Google Custom Search API Error:', errorMessage);
+            if (errorMessage.includes('quotaExceeded') || (data.error && data.error.code === 429)) {
+                throw new Error("The daily search quota has been exceeded. Please try again tomorrow or use your own API key.");
+            }
+            throw new Error(errorMessage);
+        }
+
+        return data.items || [];
+    } catch (error) {
+        console.error('Google Custom Search API Error:', error);
+        throw error; // Re-throw the error to be caught by the caller
+    }
+}

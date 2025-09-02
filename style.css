@@ -1020,3 +1020,57 @@
             opacity: 0;
             pointer-events: none;
         }
+
+/* Search Results */
+.search-results-container {
+    border-left: 3px solid #1a73e8;
+    padding-left: 15px;
+    background: #f8f9fa;
+}
+
+.search-results-header h4 {
+    font-weight: 500;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.search-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.search-result-item {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.search-result-title a {
+    font-size: 1.1rem;
+    color: #1a73e8;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.search-result-title a:hover {
+    text-decoration: underline;
+}
+
+.search-result-url {
+    font-size: 0.9rem;
+    color: #006621;
+    margin-top: 2px;
+}
+
+.search-result-snippet {
+    font-size: 0.95rem;
+    color: var(--gray);
+    margin-top: 5px;
+    line-height: 1.5;
+}
