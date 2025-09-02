@@ -58,12 +58,19 @@
             <div id="googlesearch-settings" class="api-tab-content">
                 <h4>Google Custom Search API</h4>
                 <p>For web search functionality. CSE ID is also required.</p>
+                <div class="api-key-toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="useCustomGoogleKeys">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="toggle-label">Use Custom Google Keys</span>
+                </div>
                 <div class="api-key-input-container">
-                    <input type="password" id="googleApiKeyInput" placeholder="Enter your Google Search API key">
+                    <input type="password" id="googleApiKeyInput" placeholder="Enter your Google Search API key" disabled>
                     <button class="toggle-api-visibility" data-input="googleApiKeyInput"><i class="fas fa-eye"></i></button>
                 </div>
                 <div class="api-key-input-container">
-                    <input type="password" id="googleCseIdInput" placeholder="Enter your Google CSE ID">
+                    <input type="password" id="googleCseIdInput" placeholder="Enter your Google CSE ID" disabled>
                     <button class="toggle-api-visibility" data-input="googleCseIdInput"><i class="fas fa-eye"></i></button>
                 </div>
                 <div class="api-setup-actions">
@@ -194,7 +201,8 @@
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
         let OPENROUTER_API_KEY = localStorage.getItem('openrouter_api_key') || '';
         let GOOGLE_API_KEY = localStorage.getItem('google_api_key') || 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM';
-        let GOOGLE_CSE_ID = localStorage.getItem('google_cse_id') || '';
+        let GOOGLE_CSE_ID = localStorage.getItem('google_cse_id') || 'a55abf5c6e62745c5';
+        let useCustomGoogleKeys = localStorage.getItem('use_custom_google_keys') === 'true';
         
         // Chat state
         let conversationHistory = [];
@@ -232,6 +240,7 @@
         const googleCseIdInput = document.getElementById('googleCseIdInput');
         const saveGoogleSearchKeys = document.getElementById('saveGoogleSearchKeys');
         const removeGoogleSearchKeys = document.getElementById('removeGoogleSearchKeys');
+        const useCustomGoogleKeysToggle = document.getElementById('useCustomGoogleKeys');
 
         let allModels = [];
         const modelSearchInput = document.getElementById('modelSearchInput');
@@ -353,12 +362,36 @@
         function showApiSetup() {
             geminiApiKeyInput.value = GEMINI_API_KEY;
             openRouterApiKeyInput.value = OPENROUTER_API_KEY;
-            googleApiKeyInput.value = GOOGLE_API_KEY;
-            googleCseIdInput.value = GOOGLE_CSE_ID;
-            apiSetup.style.display = 'flex';
 
+            useCustomGoogleKeysToggle.checked = useCustomGoogleKeys;
+            toggleGoogleKeyInputs(useCustomGoogleKeys);
+
+            if (useCustomGoogleKeys) {
+                googleApiKeyInput.value = GOOGLE_API_KEY === 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM' ? '' : GOOGLE_API_KEY;
+                googleCseIdInput.value = GOOGLE_CSE_ID === 'a55abf5c6e62745c5' ? '' : GOOGLE_CSE_ID;
+            }
+
+            apiSetup.style.display = 'flex';
+            updateQuotaInfo();
+        }
+
+        function toggleGoogleKeyInputs(enabled) {
+            googleApiKeyInput.disabled = !enabled;
+            googleCseIdInput.disabled = !enabled;
+            if (!enabled) {
+                googleApiKeyInput.value = '';
+                googleCseIdInput.value = '';
+                googleApiKeyInput.placeholder = 'Using default keys';
+                googleCseIdInput.placeholder = 'Using default CSE ID';
+            } else {
+                googleApiKeyInput.placeholder = 'Enter your Google Search API key';
+                googleCseIdInput.placeholder = 'Enter your Google CSE ID';
+            }
+        }
+
+        function updateQuotaInfo() {
             const quotaInfo = document.getElementById('quota-info');
-            if (GOOGLE_API_KEY === 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM') {
+            if (!useCustomGoogleKeys) {
                 const today = new Date().toISOString().split('T')[0];
                 const quota = JSON.parse(localStorage.getItem('google_search_quota') || '{}');
                 if (quota.date === today) {
@@ -389,13 +422,17 @@
                 OPENROUTER_API_KEY = key;
                 localStorage.setItem('openrouter_api_key', key);
             } else if (keyType === 'googlesearch') {
-                const apiKey = googleApiKeyInput.value.trim();
-                const cseId = googleCseIdInput.value.trim();
-                GOOGLE_API_KEY = apiKey;
-                GOOGLE_CSE_ID = cseId;
-                localStorage.setItem('google_api_key', apiKey);
-                localStorage.setItem('google_cse_id', cseId);
-                alert('Google Search keys saved!');
+                if (useCustomGoogleKeys) {
+                    const apiKey = googleApiKeyInput.value.trim();
+                    const cseId = googleCseIdInput.value.trim();
+                    GOOGLE_API_KEY = apiKey;
+                    GOOGLE_CSE_ID = cseId;
+                    localStorage.setItem('google_api_key', apiKey);
+                    localStorage.setItem('google_cse_id', cseId);
+                    alert('Google Search keys saved!');
+                } else {
+                    alert("Custom keys are not enabled. Please toggle the switch to save your keys.");
+                }
                 hideApiSetup();
                 return;
             }
@@ -421,7 +458,7 @@
                     localStorage.removeItem('google_api_key');
                     localStorage.removeItem('google_cse_id');
                     GOOGLE_API_KEY = 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM';
-                    GOOGLE_CSE_ID = '';
+                    GOOGLE_CSE_ID = 'a55abf5c6e62745c5';
                     googleApiKeyInput.value = '';
                     googleCseIdInput.value = '';
                     alert('Google Search keys removed.');
@@ -889,12 +926,9 @@
 
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
 
-            const aiMessageElement = document.createElement('div');
-            aiMessageElement.classList.add('message', 'ai-message');
-            chatMessages.appendChild(aiMessageElement);
-
             let currentResponse = "";
             let responseStarted = false;
+            let aiMessageElement;
 
             const onChunk = (text) => {
                 if (abortController.signal.aborted) return;
@@ -903,7 +937,9 @@
                     responseStarted = true;
                 }
                 currentResponse += text;
-                aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                if (aiMessageElement) {
+                    aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                }
                 scrollToBottom();
             };
 
@@ -920,11 +956,8 @@
                 userInput.focus();
             };
 
-            showTypingIndicator();
-
             try {
                 if (currentMode === 'webSearch') {
-                    hideTypingIndicator();
                     showThinkingIndicator();
                     try {
                         const searchResults = await callGoogleSearchApi(message);
@@ -935,14 +968,20 @@
                             const searchContext = searchResults.map((item, index) => `[${index + 1}] Title: ${item.title}\nSnippet: ${item.snippet}`).join('\n\n');
                             const augmentedMessage = `User query: "${message}"\n\nPlease provide a comprehensive answer based on the following search results:\n\n${searchContext}`;
 
-                            // We don't want to add the augmented message to the main history that the user sees
                             const tempHistory = [...conversationHistory];
                             tempHistory.push({ role: "user", parts: [{ text: augmentedMessage }] });
 
+                            aiMessageElement = document.createElement('div');
+                            aiMessageElement.classList.add('message', 'ai-message');
+                            chatMessages.appendChild(aiMessageElement);
                             showTypingIndicator();
                             await callApi(augmentedMessage, onChunk, onComplete, tempHistory);
                         } else {
                             addMessage("No web search results found. Trying a normal response.", false, false);
+                            aiMessageElement = document.createElement('div');
+                            aiMessageElement.classList.add('message', 'ai-message');
+                            chatMessages.appendChild(aiMessageElement);
+                            showTypingIndicator();
                             await callApi(message, onChunk, onComplete);
                         }
 
@@ -964,6 +1003,10 @@
                     addMessage(response, false, false, message);
                     onComplete(response);
                 } else {
+                    aiMessageElement = document.createElement('div');
+                    aiMessageElement.classList.add('message', 'ai-message');
+                    chatMessages.appendChild(aiMessageElement);
+                    showTypingIndicator();
                     await callApi(message, onChunk, onComplete);
                 }
             } catch (error) {
@@ -1084,6 +1127,12 @@
             removeGeminiApiKey.addEventListener('click', () => removeApiKey('gemini'));
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
+            useCustomGoogleKeysToggle.addEventListener('change', () => {
+                useCustomGoogleKeys = useCustomGoogleKeysToggle.checked;
+                localStorage.setItem('use_custom_google_keys', useCustomGoogleKeys);
+                toggleGoogleKeyInputs(useCustomGoogleKeys);
+                updateQuotaInfo();
+            });
             saveGoogleSearchKeys.addEventListener('click', () => saveApiKey('googlesearch'));
             removeGoogleSearchKeys.addEventListener('click', () => removeApiKey('googlesearch'));
             refreshModelsButton.addEventListener('click', populateModels);
