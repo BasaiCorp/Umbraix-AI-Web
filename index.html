@@ -493,7 +493,7 @@
                     <div class="search-results-header">
                         <h4>Web Search Results</h4>
                         <button class="collapse-button" data-target="${resultsId}">
-                            <i class="fas fa-chevron-up"></i>
+                            <i class="fas fa-chevron-down"></i>
                         </button>
                     </div>
                     <div class="search-results-list" id="${resultsId}">
@@ -509,7 +509,7 @@
 
                 collapseButton.addEventListener('click', () => {
                     const isCollapsed = searchResultsList.style.display === 'none';
-                    searchResultsList.style.display = isCollapsed ? 'grid' : 'none';
+                    searchResultsList.style.display = isCollapsed ? 'block' : 'none';
                     const icon = collapseButton.querySelector('i');
                     icon.classList.toggle('fa-chevron-down', !isCollapsed);
                     icon.classList.toggle('fa-chevron-up', isCollapsed);
