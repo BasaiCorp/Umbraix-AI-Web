@@ -27,6 +27,7 @@
             <div class="api-tabs">
                 <button class="api-tab-button active" data-tab="gemini">Gemini</button>
                 <button class="api-tab-button" data-tab="openrouter">OpenRouter</button>
+                <button class="api-tab-button" data-tab="googlesearch">Google Search</button>
             </div>
             <div id="gemini-settings" class="api-tab-content active">
                 <h4>Google Gemini API</h4>
@@ -53,6 +54,31 @@
                     <button id="removeOpenRouterApiKey" class="remove-button">Remove Key</button>
                 </div>
                 <p class="api-link">Get a key from <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a></p>
+            </div>
+            <div id="googlesearch-settings" class="api-tab-content">
+                <h4>Google Custom Search API</h4>
+                <p>For web search functionality. CSE ID is also required.</p>
+                <div class="api-key-toggle-container">
+                    <label class="switch">
+                        <input type="checkbox" id="useCustomGoogleKeys">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="toggle-label">Use Custom Google Keys</span>
+                </div>
+                <div class="api-key-input-container">
+                    <input type="password" id="googleApiKeyInput" placeholder="Enter your Google Search API key" disabled>
+                    <button class="toggle-api-visibility" data-input="googleApiKeyInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-key-input-container">
+                    <input type="password" id="googleCseIdInput" placeholder="Enter your Google CSE ID" disabled>
+                    <button class="toggle-api-visibility" data-input="googleCseIdInput"><i class="fas fa-eye"></i></button>
+                </div>
+                <div class="api-setup-actions">
+                    <button id="saveGoogleSearchKeys">Save Keys</button>
+                    <button id="removeGoogleSearchKeys" class="remove-button">Remove Keys</button>
+                </div>
+                <p class="api-link">Get keys from <a href="https://developers.google.com/custom-search/v1/overview" target="_blank">Google Cloud Console</a></p>
+                <div id="quota-info" style="margin-top: 10px; font-size: 0.8rem; color: var(--gray);"></div>
             </div>
             <p class="api-storage-notice"><small>Your API keys are stored locally and never shared.</small></p>
         </div>
@@ -169,11 +195,14 @@
         </div>
     </div>
 
-    <script src="openrouter.js"></script>
+    <script src="search.js"></script>
     <script>
         // API Key Configuration
         let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
         let OPENROUTER_API_KEY = localStorage.getItem('openrouter_api_key') || '';
+        let GOOGLE_API_KEY = localStorage.getItem('google_api_key') || 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM';
+        let GOOGLE_CSE_ID = localStorage.getItem('google_cse_id') || 'a55abf5c6e62745c5';
+        let useCustomGoogleKeys = localStorage.getItem('use_custom_google_keys') === 'true';
         
         // Chat state
         let conversationHistory = [];
@@ -207,6 +236,11 @@
         const removeOpenRouterApiKey = document.getElementById('removeOpenRouterApiKey');
         const toggleApiVisibilityButtons = document.querySelectorAll('.toggle-api-visibility');
         const refreshModelsButton = document.getElementById('refreshModelsButton');
+        const googleApiKeyInput = document.getElementById('googleApiKeyInput');
+        const googleCseIdInput = document.getElementById('googleCseIdInput');
+        const saveGoogleSearchKeys = document.getElementById('saveGoogleSearchKeys');
+        const removeGoogleSearchKeys = document.getElementById('removeGoogleSearchKeys');
+        const useCustomGoogleKeysToggle = document.getElementById('useCustomGoogleKeys');
 
         let allModels = [];
         const modelSearchInput = document.getElementById('modelSearchInput');
@@ -328,7 +362,47 @@
         function showApiSetup() {
             geminiApiKeyInput.value = GEMINI_API_KEY;
             openRouterApiKeyInput.value = OPENROUTER_API_KEY;
+
+            useCustomGoogleKeysToggle.checked = useCustomGoogleKeys;
+            toggleGoogleKeyInputs(useCustomGoogleKeys);
+
+            if (useCustomGoogleKeys) {
+                googleApiKeyInput.value = GOOGLE_API_KEY === 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM' ? '' : GOOGLE_API_KEY;
+                googleCseIdInput.value = GOOGLE_CSE_ID === 'a55abf5c6e62745c5' ? '' : GOOGLE_CSE_ID;
+            }
+
             apiSetup.style.display = 'flex';
+            updateQuotaInfo();
+        }
+
+        function toggleGoogleKeyInputs(enabled) {
+            googleApiKeyInput.disabled = !enabled;
+            googleCseIdInput.disabled = !enabled;
+            if (!enabled) {
+                googleApiKeyInput.value = '';
+                googleCseIdInput.value = '';
+                googleApiKeyInput.placeholder = 'Using default keys';
+                googleCseIdInput.placeholder = 'Using default CSE ID';
+            } else {
+                googleApiKeyInput.placeholder = 'Enter your Google Search API key';
+                googleCseIdInput.placeholder = 'Enter your Google CSE ID';
+            }
+        }
+
+        function updateQuotaInfo() {
+            const quotaInfo = document.getElementById('quota-info');
+            if (!useCustomGoogleKeys) {
+                const today = new Date().toISOString().split('T')[0];
+                const quota = JSON.parse(localStorage.getItem('google_search_quota') || '{}');
+                if (quota.date === today) {
+                    quotaInfo.textContent = `Default key queries today: ${quota.count || 0} / 100`;
+                } else {
+                    quotaInfo.textContent = 'Default key queries today: 0 / 100';
+                }
+                quotaInfo.style.display = 'block';
+            } else {
+                quotaInfo.style.display = 'none';
+            }
         }
 
         function hideApiSetup() {
@@ -342,11 +416,25 @@
                 key = input.value.trim();
                 GEMINI_API_KEY = key;
                 localStorage.setItem('gemini_api_key', key);
-            } else {
+            } else if (keyType === 'openrouter'){
                 input = openRouterApiKeyInput;
                 key = input.value.trim();
                 OPENROUTER_API_KEY = key;
                 localStorage.setItem('openrouter_api_key', key);
+            } else if (keyType === 'googlesearch') {
+                if (useCustomGoogleKeys) {
+                    const apiKey = googleApiKeyInput.value.trim();
+                    const cseId = googleCseIdInput.value.trim();
+                    GOOGLE_API_KEY = apiKey;
+                    GOOGLE_CSE_ID = cseId;
+                    localStorage.setItem('google_api_key', apiKey);
+                    localStorage.setItem('google_cse_id', cseId);
+                    alert('Google Search keys saved!');
+                } else {
+                    alert("Custom keys are not enabled. Please toggle the switch to save your keys.");
+                }
+                hideApiSetup();
+                return;
             }
             alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key saved!`);
             hideApiSetup();
@@ -362,10 +450,19 @@
                     localStorage.removeItem('gemini_api_key');
                     GEMINI_API_KEY = '';
                     geminiApiKeyInput.value = '';
-                } else {
+                } else if (keyType === 'openrouter') {
                     localStorage.removeItem('openrouter_api_key');
                     OPENROUTER_API_KEY = '';
                     openRouterApiKeyInput.value = '';
+                } else if (keyType === 'googlesearch') {
+                    localStorage.removeItem('google_api_key');
+                    localStorage.removeItem('google_cse_id');
+                    GOOGLE_API_KEY = 'AIzaSyBy6hIfvcKPvxsXw10ZQQ7NZPiQB-RgjuM';
+                    GOOGLE_CSE_ID = 'a55abf5c6e62745c5';
+                    googleApiKeyInput.value = '';
+                    googleCseIdInput.value = '';
+                    alert('Google Search keys removed.');
+                    return;
                 }
                 alert(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API Key removed.`);
             }
@@ -373,6 +470,35 @@
 
         function formatAIResponse(text) {
             return md.render(text);
+        }
+
+        function addSearchResults(results) {
+            const resultsDiv = document.createElement('div');
+            resultsDiv.classList.add('message', 'ai-message', 'search-results-container');
+
+            if (results.length === 0) {
+                resultsDiv.innerHTML = '<p>No search results found.</p>';
+            } else {
+                const resultsList = results.map((item, index) => `
+                    <div class="search-result-item">
+                        <div class="search-result-title">
+                            <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+                        </div>
+                        <div class="search-result-url">${item.displayLink}</div>
+                        <div class="search-result-snippet">${item.snippet}</div>
+                    </div>
+                `).join('');
+                resultsDiv.innerHTML = `
+                    <div class="search-results-header">
+                        <h4>Web Search Results</h4>
+                    </div>
+                    <div class="search-results-list">
+                        ${resultsList}
+                    </div>
+                `;
+            }
+            chatMessages.appendChild(resultsDiv);
+            scrollToBottom();
         }
 
         // Message Management
@@ -586,32 +712,34 @@
             });
         }
 
-        async function callApi(message, onChunk, onComplete) {
+        async function callApi(message, onChunk, onComplete, history = null) {
             const modelData = allModels.find(m => m.id === currentModel);
             if (!modelData) {
                 throw new Error("Selected model not found!");
             }
 
+            const conversationContext = history || conversationHistory;
+
             if (modelData.provider === 'openrouter') {
                 if (!OPENROUTER_API_KEY) throw new Error("OpenRouter API key not set.");
-                const history = conversationHistory.map(item => ({
+                const openRouterHistory = conversationContext.map(item => ({
                     role: item.role === 'model' ? 'assistant' : 'user',
                     content: item.parts[0].text
                 }));
-                await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, history, onChunk, onComplete, abortController.signal);
+                await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, openRouterHistory, onChunk, onComplete, abortController.signal);
             } else {
                 // Default to Gemini
                 if (!GEMINI_API_KEY) throw new Error("Gemini API key not set.");
-                await callGeminiAPI(message, onChunk, onComplete);
+                await callGeminiAPI(message, onChunk, onComplete, conversationContext);
             }
         }
 
-        async function callGeminiAPI(message, onChunk, onComplete) {
+        async function callGeminiAPI(message, onChunk, onComplete, history) {
             const systemPrompt = modePrompts[currentMode];
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:streamGenerateContent?key=${GEMINI_API_KEY}&alt=sse`;
 
             let conversationContext = [{ role: "user", parts: [{ text: systemPrompt }] }];
-            conversationContext = conversationContext.concat(conversationHistory.slice(-10));
+            conversationContext = conversationContext.concat(history.slice(-10));
             conversationContext.push({ role: "user", parts: [{ text: message }] });
 
             const requestBody = {
@@ -798,12 +926,9 @@
 
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
 
-            const aiMessageElement = document.createElement('div');
-            aiMessageElement.classList.add('message', 'ai-message');
-            chatMessages.appendChild(aiMessageElement);
-
             let currentResponse = "";
             let responseStarted = false;
+            let aiMessageElement;
 
             const onChunk = (text) => {
                 if (abortController.signal.aborted) return;
@@ -812,7 +937,9 @@
                     responseStarted = true;
                 }
                 currentResponse += text;
-                aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                if (aiMessageElement) {
+                    aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                }
                 scrollToBottom();
             };
 
@@ -829,10 +956,41 @@
                 userInput.focus();
             };
 
-            showTypingIndicator();
-
             try {
-                if (currentMode === 'imagen') {
+                if (currentMode === 'webSearch') {
+                    showThinkingIndicator();
+                    try {
+                        const searchResults = await callGoogleSearchApi(message);
+                        hideThinkingIndicator();
+
+                        if (searchResults.length > 0) {
+                            addSearchResults(searchResults);
+                            const searchContext = searchResults.map((item, index) => `[${index + 1}] Title: ${item.title}\nSnippet: ${item.snippet}`).join('\n\n');
+                            const augmentedMessage = `User query: "${message}"\n\nPlease provide a comprehensive answer based on the following search results:\n\n${searchContext}`;
+
+                            const tempHistory = [...conversationHistory];
+                            tempHistory.push({ role: "user", parts: [{ text: augmentedMessage }] });
+
+                            aiMessageElement = document.createElement('div');
+                            aiMessageElement.classList.add('message', 'ai-message');
+                            chatMessages.appendChild(aiMessageElement);
+                            showTypingIndicator();
+                            await callApi(augmentedMessage, onChunk, onComplete, tempHistory);
+                        } else {
+                            addMessage("No web search results found. Trying a normal response.", false, false);
+                            aiMessageElement = document.createElement('div');
+                            aiMessageElement.classList.add('message', 'ai-message');
+                            chatMessages.appendChild(aiMessageElement);
+                            showTypingIndicator();
+                            await callApi(message, onChunk, onComplete);
+                        }
+
+                    } catch (error) {
+                        hideThinkingIndicator();
+                        addMessage(`Search failed: ${error.message}`, false, true);
+                        onComplete(""); // End generation
+                    }
+                } else if (currentMode === 'imagen') {
                     hideTypingIndicator();
                     let response;
                     if (currentModel === 'gemini-2.5-flash-image-preview') {
@@ -845,6 +1003,10 @@
                     addMessage(response, false, false, message);
                     onComplete(response);
                 } else {
+                    aiMessageElement = document.createElement('div');
+                    aiMessageElement.classList.add('message', 'ai-message');
+                    chatMessages.appendChild(aiMessageElement);
+                    showTypingIndicator();
                     await callApi(message, onChunk, onComplete);
                 }
             } catch (error) {
@@ -965,6 +1127,14 @@
             removeGeminiApiKey.addEventListener('click', () => removeApiKey('gemini'));
             saveOpenRouterApiKey.addEventListener('click', () => saveApiKey('openrouter'));
             removeOpenRouterApiKey.addEventListener('click', () => removeApiKey('openrouter'));
+            useCustomGoogleKeysToggle.addEventListener('change', () => {
+                useCustomGoogleKeys = useCustomGoogleKeysToggle.checked;
+                localStorage.setItem('use_custom_google_keys', useCustomGoogleKeys);
+                toggleGoogleKeyInputs(useCustomGoogleKeys);
+                updateQuotaInfo();
+            });
+            saveGoogleSearchKeys.addEventListener('click', () => saveApiKey('googlesearch'));
+            removeGoogleSearchKeys.addEventListener('click', () => removeApiKey('googlesearch'));
             refreshModelsButton.addEventListener('click', populateModels);
             stopButton.addEventListener('click', stopGeneration);
 
