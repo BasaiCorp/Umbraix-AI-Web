@@ -879,6 +879,44 @@
             font-size: 0.95rem;
         }
 
+        .ai-message-footer {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 10px;
+            gap: 10px;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .message-action-button {
+            background: transparent;
+            border: none;
+            color: var(--gray);
+            padding: 5px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.9rem;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .message-action-button:hover {
+            background: var(--light-gray);
+            color: var(--dark);
+        }
+
+        .ai-message-footer .mode-indicator {
+            margin-left: 0;
+        }
+
         /* Responsive Design */
         @media (min-width: 768px) {
             .chat-container {
