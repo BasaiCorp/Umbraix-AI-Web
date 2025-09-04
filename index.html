@@ -331,6 +331,36 @@
             }
         }
 
+        function copyMessage(button) {
+            const messageElement = button.closest('.ai-message');
+            if (!messageElement) return;
+
+            const contentElement = messageElement.querySelector('.ai-message-content');
+            if (!contentElement) return;
+
+            // Use innerText to get the plain text representation
+            const textToCopy = contentElement.innerText;
+
+            if (!navigator.clipboard) {
+                console.error('Clipboard API not available');
+                button.innerHTML = '<i class="fas fa-times"></i>'; // Error icon
+                return;
+            }
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalIcon = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.innerHTML = originalIcon;
+                    button.disabled = false;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy message: ', err);
+                button.innerHTML = '<i class="fas fa-times"></i>';
+            });
+        }
+
 
         function loadGeneratedImages() {
             for (let i = 0; i < localStorage.length; i++) {
@@ -527,39 +557,64 @@
             if (isUser) {
                 messageDiv.classList.add('user-message');
                 messageDiv.textContent = text;
-            } else {
-                messageDiv.classList.add('ai-message');
-                if (isError) {
-                    messageDiv.classList.add('error-message');
-                }
+                chatMessages.appendChild(messageDiv);
+                scrollToBottom();
+                return;
+            }
 
-                if (prompt) {
-                    const promptDiv = document.createElement('div');
-                    promptDiv.classList.add('prompt-text');
-                    promptDiv.textContent = prompt;
-                    messageDiv.appendChild(promptDiv);
-                }
-                
-                if (text.startsWith('data:image/')) {
-                    const img = document.createElement('img');
-                    img.src = text;
-                    img.classList.add('generated-image');
-                    messageDiv.appendChild(img);
-                } else {
-                    // Use the fixed formatting function
-                    const formattedText = formatAIResponse(text);
-                    messageDiv.innerHTML = formattedText;
-                }
-                
-                // Add mode indicator if not normal and not error
-                if (currentMode !== 'normal' && !isError) {
-                    const modeIndicator = document.createElement('span');
-                    modeIndicator.classList.add('mode-indicator');
-                    modeIndicator.textContent = getDisplayName('mode', currentMode);
-                    messageDiv.appendChild(modeIndicator);
-                }
+            messageDiv.classList.add('ai-message');
+            if (isError) {
+                messageDiv.classList.add('error-message');
+            }
+
+            if (prompt) {
+                const promptDiv = document.createElement('div');
+                promptDiv.classList.add('prompt-text');
+                promptDiv.textContent = prompt;
+                messageDiv.appendChild(promptDiv);
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('ai-message-content');
+
+            if (text.startsWith('data:image/')) {
+                const img = document.createElement('img');
+                img.src = text;
+                img.classList.add('generated-image');
+                contentDiv.appendChild(img);
+            } else {
+                const formattedText = formatAIResponse(text);
+                contentDiv.innerHTML = formattedText;
+            }
+            messageDiv.appendChild(contentDiv);
+
+            const footerDiv = document.createElement('div');
+            footerDiv.classList.add('ai-message-footer');
+
+            // Add mode indicator if not normal and not error
+            if (currentMode !== 'normal' && !isError) {
+                const modeIndicator = document.createElement('span');
+                modeIndicator.classList.add('mode-indicator');
+                modeIndicator.textContent = getDisplayName('mode', currentMode);
+                footerDiv.appendChild(modeIndicator);
+            }
+
+            // Add actions for non-error AI messages
+            if (!isError && !text.startsWith('data:image/')) {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.classList.add('message-actions');
+                actionsDiv.innerHTML = `
+                    <button class="message-action-button" onclick="copyMessage(this)" title="Copy response">
+                        <i class="far fa-clipboard"></i>
+                    </button>
+                `;
+                footerDiv.appendChild(actionsDiv);
             }
             
+            if (footerDiv.hasChildNodes()) {
+                messageDiv.appendChild(footerDiv);
+            }
+
             chatMessages.appendChild(messageDiv);
             scrollToBottom();
         }
@@ -950,18 +1005,50 @@
 
             const onChunk = (text) => {
                 if (abortController.signal.aborted) return;
+
+                let contentDiv = aiMessageElement.querySelector('.ai-message-content');
+
                 if (!responseStarted) {
                     hideTypingIndicator();
                     responseStarted = true;
+
+                    if (!contentDiv) {
+                        contentDiv = document.createElement('div');
+                        contentDiv.className = 'ai-message-content';
+                        aiMessageElement.appendChild(contentDiv);
+                    }
                 }
+
                 currentResponse += text;
-                if (aiMessageElement) {
-                    aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                if (contentDiv) {
+                    contentDiv.innerHTML = formatAIResponse(currentResponse);
                 }
                 scrollToBottom();
             };
 
             const onComplete = (fullResponse) => {
+                if (aiMessageElement && !abortController.signal.aborted) {
+                    const footerDiv = document.createElement('div');
+                    footerDiv.classList.add('ai-message-footer');
+
+                    if (currentMode !== 'normal') {
+                        const modeIndicator = document.createElement('span');
+                        modeIndicator.classList.add('mode-indicator');
+                        modeIndicator.textContent = getDisplayName('mode', currentMode);
+                        footerDiv.appendChild(modeIndicator);
+                    }
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.classList.add('message-actions');
+                    actionsDiv.innerHTML = `
+                        <button class="message-action-button" onclick="copyMessage(this)" title="Copy response">
+                            <i class="far fa-clipboard"></i>
+                        </button>
+                    `;
+                    footerDiv.appendChild(actionsDiv);
+                    aiMessageElement.appendChild(footerDiv);
+                }
+
                 if (abortController.signal.aborted) {
                     conversationHistory.push({ role: "model", parts: [{ text: currentResponse + "..." }] });
                 } else {
