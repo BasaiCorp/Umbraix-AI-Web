@@ -332,16 +332,6 @@
         }
 
 
-        function loadGeneratedImages() {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('generated_image_')) {
-                    const imageData = JSON.parse(localStorage.getItem(key));
-                    addMessage(imageData.imageUrl, false, false, imageData.prompt);
-                }
-            }
-        }
-
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
             if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
@@ -349,7 +339,6 @@
             } else {
                 hideApiSetup();
                 addInitialMessage();
-                loadGeneratedImages();
             }
             
             updateSelection('mode', currentMode);
@@ -520,6 +509,34 @@
         }
 
         // Message Management
+        function downloadImage(url, prompt) {
+            const a = document.createElement('a');
+            a.href = url;
+            const sanitizedPrompt = prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `imagen_${sanitizedPrompt.substring(0, 20)}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function createImageContainer(imageUrl, prompt) {
+            const container = document.createElement('div');
+            container.classList.add('image-container');
+
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.classList.add('generated-image');
+            container.appendChild(img);
+
+            const downloadButton = document.createElement('button');
+            downloadButton.classList.add('download-button');
+            downloadButton.innerHTML = '<i class="fas fa-download"></i> Download';
+            downloadButton.onclick = () => downloadImage(imageUrl, prompt);
+            container.appendChild(downloadButton);
+
+            return container;
+        }
+
         function addMessage(text, isUser = false, isError = false, prompt = null) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
@@ -541,10 +558,8 @@
                 }
                 
                 if (text.startsWith('data:image/')) {
-                    const img = document.createElement('img');
-                    img.src = text;
-                    img.classList.add('generated-image');
-                    messageDiv.appendChild(img);
+                    const imageContainer = createImageContainer(text, prompt || 'generated_image');
+                    messageDiv.appendChild(imageContainer);
                 } else {
                     // Use the fixed formatting function
                     const formattedText = formatAIResponse(text);
@@ -646,11 +661,11 @@
             modelOptionsContainer.innerHTML = '<div class="loading-models"><span><i class="fas fa-spinner fa-spin"></i> Loading models...</span></div>';
 
             const staticGeminiModels = [
-                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful model', provider: 'gemini' },
-                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast and efficient', provider: 'gemini' },
-                { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Legacy fast model', provider: 'gemini' },
-                { id: 'gemini-2.5-flash-image-preview', name: 'Gemini 2.5 Flash Image', description: 'Conversational image generation', provider: 'gemini' },
-                { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0', description: 'Dedicated image generation', provider: 'gemini' }
+                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful model', provider: 'gemini', isImageModel: false },
+                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast and efficient', provider: 'gemini', isImageModel: false },
+                { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Legacy fast model', provider: 'gemini', isImageModel: false },
+                { id: 'gemini-2.5-flash-image-preview', name: 'Gemini 2.5 Flash Image', description: 'Conversational image generation', provider: 'gemini', isImageModel: true },
+                { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0', description: 'Dedicated image generation', provider: 'gemini', isImageModel: true }
             ];
 
             allModels = staticGeminiModels.map(m => ({...m, provider: 'gemini'}));
@@ -662,7 +677,8 @@
                         id: model.id,
                         name: model.name,
                         description: `Context: ${model.context_length.toLocaleString()} tokens`,
-                        provider: 'openrouter'
+                        provider: 'openrouter',
+                        isImageModel: Array.isArray(model.output_modalities) && model.output_modalities.includes('image')
                     }));
                     allModels = allModels.concat(mappedModels);
                 } catch (error) {
@@ -704,10 +720,12 @@
                     iconClass = 'fa-route'; // Using Font Awesome's route icon
                 }
 
+                const imageIcon = model.isImageModel ? '<i class="fas fa-image model-capability-icon"></i>' : '';
+
                 option.innerHTML = `
                     <i class="fas ${iconClass}"></i>
                     <div class="option-text">
-                        <h4>${escapeHtml(model.name)}</h4>
+                        <h4>${escapeHtml(model.name)} ${imageIcon}</h4>
                         <p>${escapeHtml(model.description)}</p>
                     </div>
                 `;
@@ -730,7 +748,7 @@
             });
         }
 
-        async function callApi(message, onChunk, onComplete, history = null) {
+        async function callApi(message, onChunk, onComplete, history = null, options = {}) {
             const modelData = allModels.find(m => m.id === currentModel);
             if (!modelData) {
                 throw new Error("Selected model not found!");
@@ -742,9 +760,10 @@
                 if (!OPENROUTER_API_KEY) throw new Error("OpenRouter API key not set.");
                 const openRouterHistory = conversationContext.map(item => ({
                     role: item.role === 'model' ? 'assistant' : 'user',
-                    content: item.parts[0].text
+                    // Filter out any non-text parts before joining
+                    content: item.parts.map(p => p.text).filter(Boolean).join('\n')
                 }));
-                await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, openRouterHistory, onChunk, onComplete, abortController.signal);
+                await callOpenRouterAPI(OPENROUTER_API_KEY, currentModel, openRouterHistory, onChunk, onComplete, abortController.signal, options);
             } else {
                 // Default to Gemini
                 if (!GEMINI_API_KEY) throw new Error("Gemini API key not set.");
@@ -848,12 +867,6 @@
 
                 if (data.predictions && data.predictions[0] && data.predictions[0].image) {
                     const imageUrl = `data:image/png;base64,${data.predictions[0].image.bytesBase64Encoded}`;
-                    const imageId = `generated_image_${Date.now()}`;
-                    const imageData = {
-                        prompt: message,
-                        imageUrl: imageUrl
-                    };
-                    localStorage.setItem(imageId, JSON.stringify(imageData));
                     return imageUrl;
                 }
 
@@ -896,12 +909,6 @@
                     const imagePart = data.candidates[0].content.parts.find(part => part.inline_data);
                     if (imagePart) {
                         const imageUrl = `data:image/png;base64,${imagePart.inline_data.data}`;
-                        const imageId = `generated_image_${Date.now()}`;
-                        const imageData = {
-                            prompt: message,
-                            imageUrl: imageUrl
-                        };
-                        localStorage.setItem(imageId, JSON.stringify(imageData));
                         return imageUrl;
                     }
                 }
@@ -944,28 +951,71 @@
 
             conversationHistory.push({ role: "user", parts: [{ text: message }] });
 
-            let currentResponse = "";
+            let currentTextResponse = "";
+            let imageUrlResponse = null;
             let responseStarted = false;
             let aiMessageElement;
+            let textElement;
 
-            const onChunk = (text) => {
+            // This function creates the initial message bubble
+            function setupStreamingUI() {
+                if (aiMessageElement) return; // Already created
+                hideTypingIndicator();
+                aiMessageElement = document.createElement('div');
+                aiMessageElement.classList.add('message', 'ai-message');
+                textElement = document.createElement('div');
+                aiMessageElement.appendChild(textElement);
+                chatMessages.appendChild(aiMessageElement);
+            }
+
+            const onChunk = (chunk) => {
                 if (abortController.signal.aborted) return;
                 if (!responseStarted) {
-                    hideTypingIndicator();
                     responseStarted = true;
+                    setupStreamingUI(); // Create UI on first chunk
                 }
-                currentResponse += text;
-                if (aiMessageElement) {
-                    aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+
+                if (chunk.startsWith('data:image/')) {
+                    imageUrlResponse = chunk;
+                    // Create or update the image container
+                    let imageContainer = aiMessageElement.querySelector('.image-container');
+                    if (!imageContainer) {
+                        imageContainer = createImageContainer(chunk, message);
+                        aiMessageElement.appendChild(imageContainer);
+                    } else {
+                        imageContainer.querySelector('img').src = chunk;
+                    }
+                } else {
+                    currentTextResponse += chunk;
+                    if(textElement) textElement.innerHTML = formatAIResponse(currentTextResponse);
                 }
                 scrollToBottom();
             };
 
-            const onComplete = (fullResponse) => {
+            const onComplete = (fullTextResponse) => {
                 if (abortController.signal.aborted) {
-                    conversationHistory.push({ role: "model", parts: [{ text: currentResponse + "..." }] });
+                    conversationHistory.push({ role: "model", parts: [{ text: currentTextResponse + "..." }] });
                 } else {
-                    conversationHistory.push({ role: "model", parts: [{ text: fullResponse }] });
+                    const parts = [];
+                    const finalText = fullTextResponse || currentTextResponse;
+                    if (finalText) {
+                        parts.push({ text: finalText });
+                    }
+                    // For Google models, the response is the URL itself
+                    if (fullTextResponse && fullTextResponse.startsWith('data:image/')) {
+                        imageUrlResponse = fullTextResponse;
+                    }
+
+                    if (imageUrlResponse && !parts.some(p => p.text === imageUrlResponse)) {
+                        parts.push({ text: imageUrlResponse });
+                    }
+
+                    if (parts.length > 0) {
+                        conversationHistory.push({ role: "model", parts: parts });
+                    } else if (isGenerating) {
+                        // Handle cases where no response was generated but process should end
+                        conversationHistory.push({ role: "model", parts: [{ text: "" }] });
+                    }
                 }
                 isGenerating = false;
                 sendButton.style.display = 'block';
@@ -975,40 +1025,10 @@
             };
 
             try {
-                if (currentMode === 'webSearch') {
-                    showThinkingIndicator();
-                    try {
-                        const searchResults = await callGoogleSearchApi(message);
-                        hideThinkingIndicator();
+                const modelData = allModels.find(m => m.id === currentModel);
 
-                        if (searchResults.length > 0) {
-                            addSearchResults(searchResults);
-                            const searchContext = searchResults.map((item, index) => `[${index + 1}] Title: ${item.title}\nSnippet: ${item.snippet}`).join('\n\n');
-                            const augmentedMessage = `User query: "${message}"\n\nPlease provide a comprehensive answer based on the following search results:\n\n${searchContext}`;
-
-                            const tempHistory = [...conversationHistory];
-                            tempHistory.push({ role: "user", parts: [{ text: augmentedMessage }] });
-
-                            aiMessageElement = document.createElement('div');
-                            aiMessageElement.classList.add('message', 'ai-message');
-                            chatMessages.appendChild(aiMessageElement);
-                            showTypingIndicator();
-                            await callApi(augmentedMessage, onChunk, onComplete, tempHistory);
-                        } else {
-                            addMessage("No web search results found. Trying a normal response.", false, false);
-                            aiMessageElement = document.createElement('div');
-                            aiMessageElement.classList.add('message', 'ai-message');
-                            chatMessages.appendChild(aiMessageElement);
-                            showTypingIndicator();
-                            await callApi(message, onChunk, onComplete);
-                        }
-
-                    } catch (error) {
-                        hideThinkingIndicator();
-                        addMessage(`Search failed: ${error.message}`, false, true);
-                        onComplete(""); // End generation
-                    }
-                } else if (currentMode === 'imagen') {
+                // Handle non-streaming Google image models separately
+                if (currentMode === 'imagen' && modelData && modelData.provider === 'gemini') {
                     hideTypingIndicator();
                     let response;
                     if (currentModel === 'gemini-2.5-flash-image-preview') {
@@ -1016,15 +1036,51 @@
                     } else if (currentModel === 'imagen-4.0-generate-001') {
                         response = await callImagen4API(message);
                     } else {
-                        response = await callGeminiFlashImageAPI(message);
+                        addMessage("This Gemini model does not support image generation. Please select an image-capable model.", false, true);
+                        onComplete("");
+                        return;
                     }
                     addMessage(response, false, false, message);
                     onComplete(response);
-                } else {
-                    aiMessageElement = document.createElement('div');
-                    aiMessageElement.classList.add('message', 'ai-message');
-                    chatMessages.appendChild(aiMessageElement);
-                    showTypingIndicator();
+                    return; // End execution for this path
+                }
+
+                // Setup for all streaming calls
+                setupStreamingUI();
+                showTypingIndicator(); // Show indicator inside the bubble
+                if(aiMessageElement) aiMessageElement.replaceChild(document.getElementById('typingIndicatorOld'), textElement);
+
+
+                if (currentMode === 'webSearch') {
+                    showThinkingIndicator();
+                    try {
+                        const searchResults = await callGoogleSearchApi(message);
+                        hideThinkingIndicator();
+                        if (searchResults.length > 0) {
+                            addSearchResults(searchResults);
+                            const searchContext = searchResults.map((item, index) => `[${index + 1}] Title: ${item.title}\nSnippet: ${item.snippet}`).join('\n\n');
+                            const augmentedMessage = `User query: "${message}"\n\nPlease provide a comprehensive answer based on the following search results:\n\n${searchContext}`;
+                            const tempHistory = [...conversationHistory];
+                            tempHistory.push({ role: "user", parts: [{ text: augmentedMessage }] });
+                            await callApi(augmentedMessage, onChunk, onComplete, tempHistory);
+                        } else {
+                            addMessage("No web search results found. Trying a normal response.", false, false);
+                            await callApi(message, onChunk, onComplete);
+                        }
+                    } catch (error) {
+                        hideThinkingIndicator();
+                        addMessage(`Search failed: ${error.message}`, false, true);
+                        onComplete("");
+                    }
+                } else if (currentMode === 'imagen') { // This now only handles OpenRouter image models
+                     if (modelData && modelData.provider === 'openrouter' && modelData.isImageModel) {
+                        await callApi(message, onChunk, onComplete, null, { isImageGen: true });
+                    } else {
+                        addMessage("This model does not support image generation. Please select an image-capable model.", false, true);
+                        onComplete("");
+                    }
+                }
+                else { // Normal text streaming
                     await callApi(message, onChunk, onComplete);
                 }
             } catch (error) {

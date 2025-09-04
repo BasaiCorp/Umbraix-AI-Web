@@ -40,14 +40,20 @@ async function fetchOpenRouterModels(apiKey) {
  * @param {Array<object>} messages - The conversation history.
  * @returns {Promise<string>} - A promise that resolves to the AI's response text.
  */
-async function callOpenRouterAPI(apiKey, model, messages, onChunk, onComplete, signal) {
+async function callOpenRouterAPI(apiKey, model, messages, onChunk, onComplete, signal, options = {}) {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
-    const body = JSON.stringify({
+    const requestBody = {
         model: model,
         messages: messages,
         stream: true
-    });
+    };
+
+    if (options.isImageGen) {
+        requestBody.modalities = ["image", "text"];
+    }
+
+    const body = JSON.stringify(requestBody);
 
     try {
         const response = await fetch(url, {
@@ -90,10 +96,18 @@ async function callOpenRouterAPI(apiKey, model, messages, onChunk, onComplete, s
                     }
                     try {
                         const parsed = JSON.parse(jsonStr);
-                        if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-                            const text = parsed.choices[0].delta.content;
-                            fullResponse += text;
-                            onChunk(text);
+                        if (parsed.choices && parsed.choices[0].delta) {
+                            const delta = parsed.choices[0].delta;
+                            if (delta.content) {
+                                const text = delta.content;
+                                fullResponse += text;
+                                onChunk(text);
+                            }
+                            if (delta.images) {
+                                for (const image of delta.images) {
+                                    onChunk(image.image_url.url);
+                                }
+                            }
                         }
                     } catch (e) {
                         // Ignore parsing errors
