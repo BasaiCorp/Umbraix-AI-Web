@@ -331,6 +331,61 @@
             }
         }
 
+        function copyMessage(buttonEl) {
+            const messageEl = buttonEl.closest('.ai-message');
+            const contentEl = messageEl.querySelector('.message-content');
+            if (contentEl) {
+                navigator.clipboard.writeText(contentEl.innerText).then(() => {
+                    const icon = buttonEl.querySelector('i');
+                    const originalIcon = icon.className;
+                    buttonEl.innerHTML = '<i class="fas fa-check"></i>';
+                    buttonEl.title = "Copied!";
+                    setTimeout(() => {
+                        buttonEl.innerHTML = `<i class="${originalIcon}"></i>`;
+                        buttonEl.title = "Copy message";
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy message: ', err);
+                });
+            }
+        }
+
+        function selectMessage(buttonEl) {
+            const messageEl = buttonEl.closest('.ai-message');
+            const contentEl = messageEl.querySelector('.message-content');
+            if (contentEl && window.getSelection) {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(contentEl);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        function createStreamingMessageElement() {
+            const element = document.createElement('div');
+            element.classList.add('message', 'ai-message');
+
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+            element.appendChild(messageContent);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.classList.add('message-actions');
+            actionsDiv.innerHTML = `
+                <button onclick="copyMessage(this)" title="Copy message">
+                    <i class="far fa-copy"></i>
+                </button>
+                <button onclick="selectMessage(this)" title="Select message">
+                    <i class="far fa-highlighter"></i>
+                </button>
+            `;
+            element.appendChild(actionsDiv);
+
+            chatMessages.appendChild(element);
+            return element;
+        }
+
 
         function loadGeneratedImages() {
             for (let i = 0; i < localStorage.length; i++) {
@@ -546,9 +601,24 @@
                     img.classList.add('generated-image');
                     messageDiv.appendChild(img);
                 } else {
-                    // Use the fixed formatting function
-                    const formattedText = formatAIResponse(text);
-                    messageDiv.innerHTML = formattedText;
+                    const messageContent = document.createElement('div');
+                    messageContent.classList.add('message-content');
+                    messageContent.innerHTML = formatAIResponse(text);
+                    messageDiv.appendChild(messageContent);
+
+                    if (!isError) {
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.classList.add('message-actions');
+                        actionsDiv.innerHTML = `
+                            <button onclick="copyMessage(this)" title="Copy message">
+                                <i class="far fa-copy"></i>
+                            </button>
+                            <button onclick="selectMessage(this)" title="Select message">
+                                <i class="far fa-highlighter"></i>
+                            </button>
+                        `;
+                        messageDiv.appendChild(actionsDiv);
+                    }
                 }
                 
                 // Add mode indicator if not normal and not error
@@ -956,7 +1026,10 @@
                 }
                 currentResponse += text;
                 if (aiMessageElement) {
-                    aiMessageElement.innerHTML = formatAIResponse(currentResponse);
+                    const contentEl = aiMessageElement.querySelector('.message-content');
+                    if (contentEl) {
+                        contentEl.innerHTML = formatAIResponse(currentResponse);
+                    }
                 }
                 scrollToBottom();
             };
@@ -989,16 +1062,12 @@
                             const tempHistory = [...conversationHistory];
                             tempHistory.push({ role: "user", parts: [{ text: augmentedMessage }] });
 
-                            aiMessageElement = document.createElement('div');
-                            aiMessageElement.classList.add('message', 'ai-message');
-                            chatMessages.appendChild(aiMessageElement);
+                            aiMessageElement = createStreamingMessageElement();
                             showTypingIndicator();
                             await callApi(augmentedMessage, onChunk, onComplete, tempHistory);
                         } else {
                             addMessage("No web search results found. Trying a normal response.", false, false);
-                            aiMessageElement = document.createElement('div');
-                            aiMessageElement.classList.add('message', 'ai-message');
-                            chatMessages.appendChild(aiMessageElement);
+                            aiMessageElement = createStreamingMessageElement();
                             showTypingIndicator();
                             await callApi(message, onChunk, onComplete);
                         }
@@ -1021,9 +1090,7 @@
                     addMessage(response, false, false, message);
                     onComplete(response);
                 } else {
-                    aiMessageElement = document.createElement('div');
-                    aiMessageElement.classList.add('message', 'ai-message');
-                    chatMessages.appendChild(aiMessageElement);
+                    aiMessageElement = createStreamingMessageElement();
                     showTypingIndicator();
                     await callApi(message, onChunk, onComplete);
                 }
