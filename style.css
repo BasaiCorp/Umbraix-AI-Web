@@ -154,6 +154,56 @@
             margin-bottom: 0;
         }
 
+        .message-content {
+            flex-grow: 1;
+        }
+
+        .message-actions {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .ai-message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .message-actions button {
+            background: #e9ecef;
+            border: 1px solid #d6d6d6;
+            color: #555;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .message-actions button:hover {
+            background: #d6d6d6;
+            border-color: #c0c0c0;
+        }
+
+        .regenerate-button {
+            display: none; /* Hide regenerate button by default */
+        }
+
+        .ai-message:hover .regenerate-button {
+            display: none; /* Keep it hidden on hover by default */
+        }
+
+        .ai-message:last-child:hover .regenerate-button {
+            display: flex; /* Show only on hover of the VERY LAST ai-message */
+        }
+
         /* Markdown Content Styling */
         .ai-message ul, .ai-message ol {
             padding-left: 2em;
