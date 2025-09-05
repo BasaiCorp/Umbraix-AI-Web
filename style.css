@@ -192,6 +192,18 @@
             border-color: #c0c0c0;
         }
 
+        .regenerate-button {
+            display: none; /* Hide regenerate button by default */
+        }
+
+        .ai-message:hover .regenerate-button {
+            display: none; /* Keep it hidden on hover by default */
+        }
+
+        .ai-message:last-child:hover .regenerate-button {
+            display: flex; /* Show only on hover of the VERY LAST ai-message */
+        }
+
         /* Markdown Content Styling */
         .ai-message ul, .ai-message ol {
             padding-left: 2em;
